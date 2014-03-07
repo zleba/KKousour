@@ -20,22 +20,34 @@ SAMPLE_LIST = [
   '/VBF_HToBB_M-125_8TeV-powheg-pythia6_ext/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/VBF_HToBB_M-130_8TeV-powheg-pythia6_ext/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/VBF_HToBB_M-135_8TeV-powheg-pythia6_ext/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
+  '/VBF_HToBB_M-125_8TeV-powheg-pythia8/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/GluGluToHToBB_M-115_8TeV-powheg-pythia6/Summer12_DR53X-PU_S10_START53_V19-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/GluGluToHToBB_M-120_8TeV-powheg-pythia6/Summer12_DR53X-PU_S10_START53_V19-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/GluGluToHToBB_M-125_8TeV-powheg-pythia6_ext/Summer12_DR53X-PU_S10_START53_V19-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
   '/GluGluToHToBB_M-130_8TeV-powheg-pythia6/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
-  '/GluGluToHToBB_M-135_8TeV-powheg-pythia6/Summer12_DR53X-PU_S10_START53_V19-v1/AODSIM/V5_B/PAT_CMG_V5_17_0'    
+  '/GluGluToHToBB_M-135_8TeV-powheg-pythia6/Summer12_DR53X-PU_S10_START53_V19-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
+  '/GluGluToHToBB_M-125_8TeV-powheg-herwigpp/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',
+  '/GluGluToHToBB_M-125_8TeV-powheg-pythia8/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0',    
+  '/ggH125_HTobb_8TeV_madgraph/Summer12_DR53X-PU_S10_START53_V7C-v1/AODSIM/V5_B/PAT_CMG_V5_17_0'
 ]
 ALIAS        = ['QCD100','QCD250','QCD500','QCD1000','ZJets','WJets',
                 'TTJets','T_s-channel','T_t-channel','T_tW-channel','Tbar_s-channel','Tbar_t-channel','Tbar_tW-channel',
-                'VBFPowheg115','VBFPowheg120','VBFPowheg125','VBFPowheg130','VBFPowheg135',
-                'GFPowheg115','GFPowheg120','GFPowheg125','GFPowheg130','GFPowheg135']
-MIN_PT       = ['20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20','20'] 
-MIN_DETA     = ['2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2']
+                'VBFPowheg115','VBFPowheg120','VBFPowheg125','VBFPowheg130','VBFPowheg135','VBFPowheg125Pythia8',
+                'GFPowheg115','GFPowheg120','GFPowheg125','GFPowheg130','GFPowheg135',
+                'GFPowheg125Herwig','GFPowheg125Pythia8','GFMadgraph125']
+MAX_ETA      = '4.5'
+MIN_PT       = ['30','30','30','30','30','30','30','30','30','30','30','30','30','30','30','30',
+                '30','30','30','30','30','30','30','30','30','30','30'] 
+MIN_DETA     = ['2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2']
+MAX_DPHI     = ['2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2']
 SAVE_SOFT    = ['False','False','False','False','False','False','False','False','False','False','False','False','False',
-                'False','False','False','False','False','False','False','False','False','False']
+                'False','False','False','False','False','False','False','False','False','False','False','False','False','False']
+SAVE_PROPERTIES= ['False','False','False','False','False','False','False','False','False','False','False','False','False',
+                'True','True','True','True','True','False','False','False','False','False','False','False','False','False']
 SAVE_PARTONS = ['False','False','False','False','False','False','False','False','False','False','False','False','False',
-                'True','True','True','True','True','False','False','False','False','False']
+                'True','True','True','True','True','False','False','False','False','False','False','False','False','False']
+CORRECT_CSV = 'False'
+CORRECT_QGL = 'False'
 ##----------------------------------------------------------------------------------
 i=0
 
@@ -61,11 +73,16 @@ for ss in SAMPLE_LIST:
   file.write('  rho              = cms.InputTag(\'kt6PFJets\',\'rho\'),\n')
   file.write('  shiftJES         = cms.double(0.0),\n')
   file.write('  putag            = cms.string(\'full53x\'),\n')
+  file.write('  etaMax           = cms.double('+MAX_ETA+'),\n') 
   file.write('  ptMin            = cms.double('+MIN_PT[i]+'),\n')
   file.write('  dEtaMin          = cms.double('+MIN_DETA[i]+'),\n')
+  file.write('  dPhiMax          = cms.double('+MAX_DPHI[i]+'),\n')
   file.write('  btagThresholds   = cms.vdouble(0.244,0.679,0.898),\n')
   file.write('  btagger          = cms.string(\'combinedSecondaryVertexBJetTags\'),\n')
   file.write('  saveSoftJets     = cms.untracked.bool('+SAVE_SOFT[i]+'),\n')
+  file.write('  saveJetProperties= cms.untracked.bool('+SAVE_PROPERTIES[i]+'),\n')
+  file.write('  correctCSV       = cms.untracked.bool('+CORRECT_CSV+'),\n')
+  file.write('  correctQGL       = cms.untracked.bool('+CORRECT_QGL+'),\n')
   file.write('  ## MC ########################################\n')
   file.write('  genjets          = cms.untracked.InputTag(\'genJetSel\'),\n')
   file.write('  genparticles     = cms.untracked.InputTag(\'genParticlesPruned\'),\n')

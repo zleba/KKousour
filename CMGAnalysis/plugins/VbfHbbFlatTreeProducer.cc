@@ -11,6 +11,7 @@
 #include "TFile.h"
 #include "TBranch.h"
 #include "TH1D.h"
+#include "TH2F.h"
 #include "TMath.h"
 #include "TVector3.h"
 #include "TVectorD.h"
@@ -36,6 +37,8 @@
 
 #include "AnalysisDataFormats/CMGTools/interface/PFJet.h"
 #include "AnalysisDataFormats/CMGTools/interface/BaseMET.h"
+#include "AnalysisDataFormats/CMGTools/interface/Electron.h"
+#include "AnalysisDataFormats/CMGTools/interface/Muon.h"
 #include "CMGTools/External/interface/PileupJetIdentifier.h"
 
 using namespace std;
@@ -50,15 +53,20 @@ VbfHbbFlatTreeProducer::VbfHbbFlatTreeProducer(edm::ParameterSet const& cfg)
   srcBtag_            = cfg.getParameter<std::string>               ("btagger");
   puTag_              = cfg.getParameter<std::string>               ("putag");
   shiftJES_           = cfg.getParameter<double>                    ("shiftJES");
+  etaMax_             = cfg.getParameter<double>                    ("etaMax");
   ptMin_              = cfg.getParameter<double>                    ("ptMin");
   dEtaMin_            = cfg.getParameter<double>                    ("dEtaMin");
+  dPhiMax_            = cfg.getParameter<double>                    ("dPhiMax");
   btagThresholds_     = cfg.getParameter<vector<double> >           ("btagThresholds");
+  jetReg_xml_         = cfg.getUntrackedParameter<std::string>      ("jetRegXML","factory_JetReg_BDT_final.weights.xml");
+  jetReg_massless_    = cfg.getUntrackedParameter<bool>             ("jetRegMassless",false);
   saveJetProperties_  = cfg.getUntrackedParameter<bool>             ("saveJetProperties",false);
   saveSoftJets_       = cfg.getUntrackedParameter<bool>             ("saveSoftJets",false);
   savePartons_        = cfg.getUntrackedParameter<bool>             ("savePartons",false);
   forceNOM_           = cfg.getUntrackedParameter<bool>             ("forceNOM",false);
   forceVBF_           = cfg.getUntrackedParameter<bool>             ("forceVBF",false);
-  forceQ50_           = cfg.getUntrackedParameter<bool>             ("forceQ50",false);
+  correctCSV_         = cfg.getUntrackedParameter<bool>             ("correctCSV",false);
+  correctQGL_         = cfg.getUntrackedParameter<bool>             ("correctQGL",false);
   
   srcPU_              = cfg.getUntrackedParameter<std::string>      ("pu","");
   srcGenJets_         = cfg.getUntrackedParameter<edm::InputTag>    ("genjets",edm::InputTag(""));
@@ -96,22 +104,27 @@ void VbfHbbFlatTreeProducer::beginJob()
   outTree_->Branch("evtNo"                ,&evt_               ,"evt_/I");
   outTree_->Branch("lumi"                 ,&lumi_              ,"lumi_/I");
   outTree_->Branch("nvtx"                 ,&nVtx_              ,"nVtx_/I");
-  outTree_->Branch("selNOM"               ,&selNOM_            ,"selNOM_[3]/O");
-  outTree_->Branch("selVBF"               ,&selVBF_            ,"selVBF_[3]/O");
-  outTree_->Branch("selNOMsoft"           ,&selNOMsoft_        ,"selNOMsoft_[3]/O");
-  outTree_->Branch("selVBFsoft"           ,&selVBFsoft_        ,"selVBFsoft_[3]/O");
+  outTree_->Branch("selVBF"               ,&selVBF_            ,"selVBF_/O");
+  outTree_->Branch("selVBFsoft"           ,&selVBFsoft_        ,"selVBFsoft_/O");
+  outTree_->Branch("selNOM"               ,&selNOM_            ,"selNOM_/O");
+  outTree_->Branch("selNOMsoft"           ,&selNOMsoft_        ,"selNOMsoft_/O");
   outTree_->Branch("nSoftJets"            ,&nSoftJets_         ,"nSoftJets_/I");
   outTree_->Branch("nSoftJets2"           ,&nSoftJets2_        ,"nSoftJets2_/I");
   outTree_->Branch("nSoftJets5"           ,&nSoftJets5_        ,"nSoftJets5_/I");
+  outTree_->Branch("nSoftJets2noLep"      ,&nSoftJets2noLep_   ,"nSoftJets2noLep_/I");
   outTree_->Branch("nJets"                ,&nJets_             ,"nJets_/I");
   outTree_->Branch("nBJets"               ,&nBJets_            ,"nBJets_/I");
-  outTree_->Branch("b1"                   ,&b1_                ,"b1_[3]/I");
-  outTree_->Branch("b2"                   ,&b2_                ,"b2_[3]/I");
-  outTree_->Branch("q1"                   ,&q1_                ,"q1_[3]/I");
-  outTree_->Branch("q2"                   ,&q2_                ,"q2_[3]/I");
+  outTree_->Branch("nLeptons"             ,&nLeptons_          ,"nLeptons_/I");
+  outTree_->Branch("b1"                   ,&b1_                ,"b1_[4]/I");
+  outTree_->Branch("b2"                   ,&b2_                ,"b2_[4]/I");
+  outTree_->Branch("q1"                   ,&q1_                ,"q1_[4]/I");
+  outTree_->Branch("q2"                   ,&q2_                ,"q2_[4]/I");
   outTree_->Branch("mvaNOM"               ,&mvaNOM_            ,"mvaNOM_/F");
   outTree_->Branch("mvaVBF"               ,&mvaVBF_            ,"mvaVBF_/F");
+  outTree_->Branch("mvaNOMnoLep"          ,&mvaNOMnoLep_       ,"mvaNOMnoLep_/F");
+  outTree_->Branch("mvaVBFnoLep"          ,&mvaVBFnoLep_       ,"mvaVBFnoLep_/F"); 
   outTree_->Branch("softHt"               ,&softHt_            ,"softHt_/F");
+  outTree_->Branch("softHtnoLep"          ,&softHtnoLep_       ,"softHtnoLep_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
   outTree_->Branch("met"                  ,&met_               ,"met_/F");
@@ -119,20 +132,22 @@ void VbfHbbFlatTreeProducer::beginJob()
   outTree_->Branch("metSig"               ,&metSig_            ,"metSig_/F");
   outTree_->Branch("sphericity"           ,&sphericity_        ,"sphericity_/F");
   outTree_->Branch("aplanarity"           ,&aplanarity_        ,"aplanarity_/F");
-  outTree_->Branch("dEtaMax"              ,&dEtaMax_           ,"dEtaMax_/F");
   outTree_->Branch("x1"                   ,&x1_                ,"x1_/F");
   outTree_->Branch("x2"                   ,&x2_                ,"x2_/F");
-  outTree_->Branch("cosTheta"             ,&cosTheta_          ,"cosTheta_[3]/F");
-  outTree_->Branch("mqq"                  ,&mqq_               ,"mqq_[3]/F");
-  outTree_->Branch("mbb"                  ,&mbb_               ,"mbb_[3]/F");
-  outTree_->Branch("mbbReg"               ,&mbbReg_            ,"mbbReg_[3]/F");
-  outTree_->Branch("dEtaqq"               ,&dEtaqq_            ,"dEtaqq_[3]/F");
-  outTree_->Branch("dEtabb"               ,&dEtabb_            ,"dEtabb_[3]/F");
-  outTree_->Branch("ptbb"                 ,&ptbb_              ,"ptbb_[3]/F");
-  outTree_->Branch("dPhiqq"               ,&dPhiqq_            ,"dPhiqq_[3]/F");
-  outTree_->Branch("dPhibb"               ,&dPhibb_            ,"dPhibb_[3]/F");
-  outTree_->Branch("yBoostqq"             ,&yBoostqq_          ,"yBoostqq_[3]/F");
-  outTree_->Branch("yStarqq"              ,&yStarqq_           ,"yStarqq_[3]/F"); 
+  outTree_->Branch("mjjTrig"              ,&mjjTrig_           ,"mjjTrig_/F");
+  outTree_->Branch("dEtaTrig"             ,&dEtaTrig_          ,"dEtaTrig_/F");
+  outTree_->Branch("cosTheta"             ,&cosTheta_          ,"cosTheta_[4]/F");
+  outTree_->Branch("mqq"                  ,&mqq_               ,"mqq_[4]/F");
+  outTree_->Branch("mbb"                  ,&mbb_               ,"mbb_[4]/F");
+  outTree_->Branch("mbbReg"               ,&mbbReg_            ,"mbbReg_[4]/F");
+  outTree_->Branch("dEtaqq"               ,&dEtaqq_            ,"dEtaqq_[4]/F");
+  outTree_->Branch("dEtabb"               ,&dEtabb_            ,"dEtabb_[4]/F");
+  outTree_->Branch("ptbb"                 ,&ptbb_              ,"ptbb_[4]/F");
+  outTree_->Branch("etabb"                ,&etabb_             ,"etabb_[4]/F");
+  outTree_->Branch("dPhiqq"               ,&dPhiqq_            ,"dPhiqq_[4]/F");
+  outTree_->Branch("dPhibb"               ,&dPhibb_            ,"dPhibb_[4]/F");
+  outTree_->Branch("etaRatio"             ,&etaRatio_          ,"etaRatio_[4]/F"); 
+  outTree_->Branch("ptRatio"              ,&ptRatio_           ,"ptRatio_[4]/F"); 
   //------------------------------------------------------------------
   btagIdx_        = new std::vector<int>;
   etaIdx_         = new std::vector<int>;
@@ -151,7 +166,6 @@ void VbfHbbFlatTreeProducer::beginJob()
   btag_           = new std::vector<float>;
   blikNOM_        = new std::vector<float>;
   blikVBF_        = new std::vector<float>;
-  csv_            = new std::vector<float>;
   puMva_          = new std::vector<float>;
   jec_            = new std::vector<float>;
   regPt_          = new std::vector<float>;
@@ -168,6 +182,18 @@ void VbfHbbFlatTreeProducer::beginJob()
   phf_            = new std::vector<float>;
   muf_            = new std::vector<float>;
   elf_            = new std::vector<float>;
+  lepChId_        = new std::vector<int>;
+  lepIso_         = new std::vector<float>; 
+  lepPt_          = new std::vector<float>;
+  lepEta_         = new std::vector<float>;
+  lepPhi_         = new std::vector<float>;
+  lepE_           = new std::vector<float>;
+  outTree_->Branch("lepChId"              ,"vector<int>"       ,&lepChId_);
+  outTree_->Branch("lepIso"               ,"vector<float>"     ,&lepIso_);
+  outTree_->Branch("lepPt"                ,"vector<float>"     ,&lepPt_);
+  outTree_->Branch("lepEta"               ,"vector<float>"     ,&lepEta_);
+  outTree_->Branch("lepPhi"               ,"vector<float>"     ,&lepPhi_);
+  outTree_->Branch("lepE"                 ,"vector<float>"     ,&lepE_);
   outTree_->Branch("btagIdx"              ,"vector<int>"       ,&btagIdx_);
   outTree_->Branch("blikNOMIdx"           ,"vector<int>"       ,&blikNOMIdx_);
   outTree_->Branch("blikVBFIdx"           ,"vector<int>"       ,&blikVBFIdx_);
@@ -185,7 +211,6 @@ void VbfHbbFlatTreeProducer::beginJob()
   outTree_->Branch("jetBtag"              ,"vector<float>"     ,&btag_); 
   outTree_->Branch("jetBlikNOM"           ,"vector<float>"     ,&blikNOM_); 
   outTree_->Branch("jetBlikVBF"           ,"vector<float>"     ,&blikVBF_); 
-  outTree_->Branch("jetCSV"               ,"vector<float>"     ,&csv_); 
   outTree_->Branch("jetPuMva"             ,"vector<float>"     ,&puMva_);
   outTree_->Branch("jetJec"               ,"vector<float>"     ,&jec_);
   outTree_->Branch("jetRegPt"             ,"vector<float>"     ,&regPt_);
@@ -212,11 +237,18 @@ void VbfHbbFlatTreeProducer::beginJob()
     axisMajor_QC_   = new std::vector<float>;
     pull_           = new std::vector<float>;
     pull_QC_        = new std::vector<float>;
+    leadTrkPt_      = new std::vector<float>; 
     jetR_           = new std::vector<float>;
     jetRChg_QC_     = new std::vector<float>;
+    vtxMass_        = new std::vector<float>;
     vtx3dL_         = new std::vector<float>;
     vtx3deL_        = new std::vector<float>;
     vtxPt_          = new std::vector<float>;
+    softLepPt_      = new std::vector<float>;
+    softLepDR_      = new std::vector<float>;
+    softLepPtRel_   = new std::vector<float>;
+    softLepSigDB3D_ = new std::vector<float>;
+    softLepId_      = new std::vector<int>;
     part_           = new std::vector<int>;
     nChg_QC_        = new std::vector<int>;
     nChg_ptCut_     = new std::vector<int>;
@@ -230,10 +262,17 @@ void VbfHbbFlatTreeProducer::beginJob()
     outTree_->Branch("jetPull"              ,"vector<float>"     ,&pull_);
     outTree_->Branch("jetPull_QC"           ,"vector<float>"     ,&pull_QC_);
     outTree_->Branch("jetR"                 ,"vector<float>"     ,&jetR_);
+    outTree_->Branch("jetLeadTrkPt"         ,"vector<float>"     ,&leadTrkPt_);
     outTree_->Branch("jetRChg_QC"           ,"vector<float>"     ,&jetRChg_QC_);
     outTree_->Branch("jetVtx3dL"            ,"vector<float>"     ,&vtx3dL_);
     outTree_->Branch("jetVtx3deL"           ,"vector<float>"     ,&vtx3deL_);
     outTree_->Branch("jetVtxPt"             ,"vector<float>"     ,&vtxPt_);
+    outTree_->Branch("jetVtxMass"           ,"vector<float>"     ,&vtxMass_);
+    outTree_->Branch("jetSoftLepPt"         ,"vector<float>"     ,&softLepPt_);
+    outTree_->Branch("jetSoftLepPtRel"      ,"vector<float>"     ,&softLepPtRel_);
+    outTree_->Branch("jetSoftLepDR"         ,"vector<float>"     ,&softLepDR_);
+    outTree_->Branch("jetSoftLepSigDB3D"    ,"vector<float>"     ,&softLepSigDB3D_);
+    outTree_->Branch("jetSoftLepId"         ,"vector<int>"       ,&softLepId_);
     outTree_->Branch("jetPart"              ,"vector<int>"       ,&part_); 
     outTree_->Branch("jetnChg_QC"           ,"vector<int>"       ,&nChg_QC_);
     outTree_->Branch("jetnChg_ptCut"        ,"vector<int>"       ,&nChg_ptCut_);
@@ -282,9 +321,7 @@ void VbfHbbFlatTreeProducer::beginJob()
     outTree_->Branch("genjetE"        ,"vector<float>" ,&genjetE_);
   }
   qglCalc_    = new QGLCalculator();
-  //jetReg_     = new JetRegressor("KKousour/CMGAnalysis/data/factoryJetRegNewGenJets_MLP.weights.xml");
-  //jetReg_     = new JetRegressor("KKousour/CMGAnalysis/data/factory_JetReg_MLP.weights.xml");
-  jetReg_     = new JetRegressor("KKousour/CMGAnalysis/data/factory_JetReg_BDT.weights.xml");
+  jetReg_     = new JetRegressor("KKousour/CMGAnalysis/data/"+jetReg_xml_);
   bjetLikNOM_ = new BJetLikelihood("KKousour/CMGAnalysis/data/factory_BCanditate_NOM_BDT_GRAD.weights.xml");
   bjetLikVBF_ = new BJetLikelihood("KKousour/CMGAnalysis/data/factory_BCanditate_VBF_BDT_GRAD.weights.xml");
   discrNOM_   = new DiscriminatorMVA("KKousour/CMGAnalysis/data/factory_mvaNOM_BDT_GRAD.weights.xml");
@@ -295,7 +332,7 @@ void VbfHbbFlatTreeProducer::beginJob()
 void VbfHbbFlatTreeProducer::endJob() 
 {  
   if (puHisto_->GetEntries() > 0) {
-    fillPuWeights();
+    fillWeights();
   }
   delete qglCalc_;
   delete jetReg_;
@@ -341,7 +378,6 @@ void VbfHbbFlatTreeProducer::endJob()
   delete btag_;
   delete blikNOM_;
   delete blikVBF_;
-  delete csv_;
   delete puMva_;
   delete jec_;
   delete regPt_;
@@ -358,6 +394,12 @@ void VbfHbbFlatTreeProducer::endJob()
   delete phf_;
   delete muf_;
   delete elf_;
+  delete lepChId_;
+  delete lepIso_;
+  delete lepPt_;
+  delete lepEta_;
+  delete lepPhi_;
+  delete lepE_;
   if (saveJetProperties_) {
     delete ptD_;
     delete ptD_QC_;
@@ -369,9 +411,16 @@ void VbfHbbFlatTreeProducer::endJob()
     delete pull_QC_;
     delete jetR_;
     delete jetRChg_QC_;
+    delete leadTrkPt_;
     delete vtx3dL_;
     delete vtx3deL_;
     delete vtxPt_;
+    delete vtxMass_;
+    delete softLepPt_;
+    delete softLepPtRel_;
+    delete softLepDR_;
+    delete softLepSigDB3D_;
+    delete softLepId_;
     delete part_;
     delete nChg_QC_;
     delete nChg_ptCut_;
@@ -393,6 +442,12 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
   edm::Handle<edm::View<reco::Jet> > softJets;
   iEvent.getByLabel(srcSoftJets_,softJets);
 
+  edm::Handle<edm::View<cmg::Muon> > muons;
+  iEvent.getByLabel("cmgMuonSel",muons);
+ 
+  edm::Handle<edm::View<cmg::Electron> > electrons;
+  iEvent.getByLabel("cmgElectronSel",electrons);
+
   edm::Handle<edm::View<cmg::BaseMET> >  met;
   iEvent.getByLabel(srcMET_,met);
 
@@ -405,8 +460,8 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
   edm::Handle<GenEventInfoProduct> hEventInfo;
   edm::Handle<GenParticleCollection> genParticles;
   
-  edm::Handle<std::vector<cmg::PhysicsObjectWithPtr<edm::Ptr<reco::GenJet> > > > genjets;
-  //edm::Handle<reco::GenJetCollection> genjets;
+  edm::Handle<std::vector<cmg::PhysicsObjectWithPtr<edm::Ptr<reco::GenJet> > > > cmggenjets;
+  edm::Handle<reco::GenJetCollection> genjets;
   //---------- pu -----------------------
   edm::Handle<std::vector<PileupSummaryInfo> > PupInfo;
   if (!iEvent.isRealData()) {
@@ -443,11 +498,83 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
   bool cut_vtx = (recVtxs->size() > 0);
   
   if (cut_vtx) {
+    //---- muons block --------------------------------------------  
+    nLeptons_ = 0;
+    for(edm::View<cmg::Muon>::const_iterator imu = muons->begin();imu != muons->end(); ++imu) { 
+      if (imu->pt() < 20 || fabs(imu->eta()) > 2.5) continue;
+      if (!(imu->isGlobalMuon() && 
+            imu->isPF() &&
+            fabs(imu->normalizedChi2()) < 10 &&
+            imu->numberOfValidMuonHits() > 0 &&
+            imu->numberOfMatches() > 1 && 
+            fabs(imu->dxy()) < 0.2 &&
+            fabs(imu->dz()) < 0.5 &&
+            imu->numberOfValidPixelHits() > 0 && 
+            imu->numberOfValidTrackerHits() > 5
+           )) continue;
+      if (imu->relIso(0.5,0,0.4) > 0.15) continue;
+      lepPt_ ->push_back(imu->pt());
+      lepEta_->push_back(imu->eta());
+      lepPhi_->push_back(imu->phi());	
+      lepE_  ->push_back(imu->energy());
+      lepIso_->push_back(imu->relIso(0.5,0,0.4));	
+      lepChId_->push_back(imu->charge());      
+      nLeptons_++;
+    }// muons loop
+    //---- electrons block --------------------------------------------  
+    for(edm::View<cmg::Electron>::const_iterator iel = electrons->begin();iel != electrons->end(); ++iel) { 
+      if (iel->pt() < 20 || fabs(iel->eta()) > 2.5) continue;
+      float ecalE                          = iel->sourcePtr()->get()->ecalEnergy();
+      float trkP                           = ecalE/iel->sourcePtr()->get()->eSuperClusterOverP(); 
+      float dxy                            = iel->dxy();
+      float dz                             = iel->dz();
+      float fep                            = fabs(1./ecalE-1./trkP);                              
+      float sigmaIetaIeta                  = iel->sigmaIetaIeta();
+      float hadronicOverEm                 = iel->hadronicOverEm();
+      float deltaPhiSuperClusterTrackAtVtx = iel->deltaPhiSuperClusterTrackAtVtx();
+      float deltaEtaSuperClusterTrackAtVtx = iel->deltaEtaSuperClusterTrackAtVtx();
+      float etaSC = fabs(iel->sourcePtr()->get()->superCluster()->eta());
+      bool id(false);
+      if (etaSC < 1.442) {
+        if (hadronicOverEm < 0.1 && sigmaIetaIeta < 0.03 && dxy < 0.02 && fep < 0.05) { 
+          if (deltaPhiSuperClusterTrackAtVtx < 0.03 && deltaEtaSuperClusterTrackAtVtx < 0.004 && dz < 0.1)  {
+            id = true;
+          }
+        }
+      }// if EB
+      if (etaSC > 1.566) {
+        if (hadronicOverEm < 0.1 && sigmaIetaIeta < 0.03 && dxy < 0.02 && fep < 0.05) {
+          if (deltaPhiSuperClusterTrackAtVtx < 0.02 && deltaEtaSuperClusterTrackAtVtx < 0.005 && dz < 0.1)  {
+            id = true;
+          }
+        }
+      }// if EE	
+      if (!id) continue;
+      float Aeff;
+      if (etaSC < 1.0) Aeff = 0.13;
+      else if (etaSC >= 1.0 && etaSC < 1.479) Aeff = 0.14;
+      else if (etaSC >= 1.479 && etaSC < 2.0) Aeff = 0.07;
+      else if (etaSC >= 2.0 && etaSC < 2.2) Aeff = 0.09;
+      else if (etaSC >= 2.2 && etaSC < 2.3) Aeff = 0.11;
+      else if (etaSC >= 2.3 && etaSC < 2.5) Aeff = 0.11;
+      else Aeff = 0.14;
+      float iso = iel->chargedHadronIso(0.3)+max((iel->neutralHadronIso(0.3)+iel->photonIso(0.3)-(*rho)*Aeff),0.0);
+      if (iso > 0.15) continue;
+      lepPt_ ->push_back(iel->pt());
+      lepEta_->push_back(iel->eta());
+      lepPhi_->push_back(iel->phi());	
+      lepE_  ->push_back(iel->energy());
+      lepIso_->push_back(iso/iel->pt());
+      lepChId_->push_back(2*iel->charge());
+      nLeptons_++;
+    }// electrons loop
     //----- soft jets ----------------------
-    softHt_     = 0;
-    nSoftJets_  = 0; 
-    nSoftJets2_ = 0; 
-    nSoftJets5_ = 0; 
+    softHt_          = 0;
+    nSoftJets_       = 0; 
+    nSoftJets2_      = 0; 
+    nSoftJets5_      = 0;
+    softHtnoLep_     = 0; 
+    nSoftJets2noLep_ = 0; 
     for(int it=0;it<int(softJets->size());it++) {
       softHt_ += (*softJets)[it].pt();
       if (saveSoftJets_) {
@@ -465,6 +592,20 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
           nSoftJets5_++;
         }
       }
+      //---- cross clean with isolated leptons --
+      bool matched(false);
+      for(int ilep=0;ilep<nLeptons_;ilep++) {
+        double dR = deltaR((*softJets)[it].eta(),(*softJets)[it].phi(),(*lepEta_)[ilep],(*lepPhi_)[ilep]);
+        if (dR < 0.5) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
+      softHtnoLep_ += (*softJets)[it].pt();
+      if ((*softJets)[it].pt() > 5) {
+        nSoftJets2noLep_++;
+      }
     }
     //----- PF jets ------------------------------
     nJets_ = 0;
@@ -474,25 +615,43 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
     vector<float> vaJES;
     vector<TLorentzVector> vP4;
     for(edm::View<cmg::PFJet>::const_iterator ijet = cmg_jets.begin();ijet != cmg_jets.end(); ++ijet) {  
+      //---- cross clean with isolated leptons --
+      bool matched(false);
+      for(int ilep=0;ilep<nLeptons_;ilep++) {
+        double dR = deltaR(ijet->eta(),ijet->phi(),(*lepEta_)[ilep],(*lepPhi_)[ilep]);
+        if (dR < 0.5) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
       float chf = ijet->component(1).fraction();
       float nhf = ijet->component(5).fraction();
       float phf = ijet->component(4).fraction();
       float muf = ijet->component(3).fraction();
       float elf = ijet->component(2).fraction();
-      int chm = ijet->component(1).number();
-      int npr = ijet->nConstituents();
+      int chm   = ijet->component(1).number();
+      int npr   = ijet->nConstituents();
       float eta = fabs(ijet->eta());
-      float pt = ijet->pt();
+      float pt  = ijet->pt();
+      float btag = ijet->bDiscriminator(srcBtag_.c_str());
+      if (correctCSV_) {
+        btag = shiftCSV(btag);
+      }
+      float qgl = qglCalc_->getQGL(*ijet,*rho);
+      if (correctQGL_) {
+        qgl = shiftQGL(qgl);
+      }
       bool puIdL = ijet->passPuJetId(puTag_.c_str(),PileupJetIdentifier::kLoose);
       bool puIdM = ijet->passPuJetId(puTag_.c_str(),PileupJetIdentifier::kMedium);
       bool puIdT = ijet->passPuJetId(puTag_.c_str(),PileupJetIdentifier::kTight);
       bool idL = (npr>1 && phf<0.99 && nhf<0.99);
       bool idM = (idL && ((eta<=2.4 && nhf<0.9 && phf<0.9 && elf<0.99 && muf<0.99 && chf>0 && chm>0) || eta>2.4));
-      bool idT = (idL && ((eta<=2.4 && nhf<0.9 && phf<0.9 && elf<0.7 && muf<0.7 && chf>0 && chm>0) || eta>2.4));
-      bool btagL = (ijet->bDiscriminator(srcBtag_.c_str()) > btagThresholds_[0]);
-      bool btagM = (ijet->bDiscriminator(srcBtag_.c_str()) > btagThresholds_[1]);
-      bool btagT = (ijet->bDiscriminator(srcBtag_.c_str()) > btagThresholds_[2]);
-      if (idL && puIdL && (pt > ptMin_)) {
+      bool idT = (idL && ((eta<=2.4 && nhf<0.9 && phf<0.9 && elf<0.7 && muf<0.7 && chf>0 && chm>0) || eta>2.4));   
+      bool btagL = (btag > btagThresholds_[0]);
+      bool btagM = (btag > btagThresholds_[1]);
+      bool btagT = (btag > btagThresholds_[2]);
+      if (idL && puIdL && (pt > ptMin_) && (eta < etaMax_)) {
         vP4.push_back(TLorentzVector(ijet->px(),ijet->py(),ijet->pz(),ijet->energy()));
         sumP2  += ijet->p()  * ijet->p();
         sumPxx += ijet->px() * ijet->px();
@@ -511,17 +670,14 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
         unc_           ->push_back(ijet->uncOnFourVectorScale());
         jec_           ->push_back(aJES/ijet->rawFactor());
         float dphiJetMet = fabs(deltaPhi(ijet->phi(),(*met)[0].phi()));
-        regPt_         ->push_back((jetReg_->getTarget(*ijet,dphiJetMet,*rho,(*met)[0].et()))[0]/ijet->pt());
-        regE_          ->push_back((jetReg_->getTarget(*ijet,dphiJetMet,*rho,(*met)[0].et()))[0]/ijet->pt());
         jetMetPhi_     ->push_back(dphiJetMet);
         pt_            ->push_back(aJES*pt);
         phi_           ->push_back(ijet->phi());
         eta_           ->push_back(ijet->eta());
         mass_          ->push_back(aJES*ijet->mass());
         energy_        ->push_back(aJES*ijet->energy());
-        btag_          ->push_back(ijet->bDiscriminator(srcBtag_.c_str()));
-        csv_           ->push_back(ijet->bDiscriminator("combinedSecondaryVertexBJetTags"));
-        qgl_           ->push_back(qglCalc_->getQGL(*ijet,*rho));
+        btag_          ->push_back(btag); 
+        qgl_           ->push_back(qgl);  
         puMva_         ->push_back(ijet->puMva(puTag_.c_str()));
         puIdL_         ->push_back(puIdL);
         puIdM_         ->push_back(puIdM);
@@ -532,12 +688,55 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
         btagL_         ->push_back(btagL);
         btagM_         ->push_back(btagM);
         btagT_         ->push_back(btagT);
+        float softLepPt(0.0),softLepPtRel(0.0),softLepDR(0.0),softLepId(-1),softLepPtRelMax(0.0),softLepSigDB3D(0.0);
+        //---- identify muons that match the jet ------
+        for(edm::View<cmg::Muon>::const_iterator imuon = muons->begin();imuon != muons->end(); ++imuon) {
+          if (imuon->pt() < 2) continue;
+          float dR    = deltaR(imuon->eta(),imuon->phi(),ijet->eta(),ijet->phi()); 
+          float ptRel = ((ijet->p4().Vect()-imuon->p4().Vect()).Cross(imuon->p4().Vect())).R()/ijet->p4().Vect().R();
+          if (dR < 0.5 && ptRel > softLepPtRelMax) {
+            softLepPt       = imuon->pt();
+            softLepDR       = dR;
+            softLepPtRel    = ptRel; 
+            softLepId       = 0;
+            softLepPtRelMax = ptRel;
+            softLepSigDB3D  = 0;
+            if (imuon->dB3D() != 0) {
+              softLepSigDB3D  = imuon->edB3D()/imuon->dB3D();
+            } 
+          }
+        }
+        //---- identify electrons that match the jet ------
+        for(edm::View<cmg::Electron>::const_iterator ielectron = electrons->begin();ielectron != electrons->end(); ++ielectron) {
+          if ((ielectron->mva() < -0.1) || (ielectron->pt() < 2)) continue;
+          float dR    = deltaR(ielectron->eta(),ielectron->phi(),ijet->eta(),ijet->phi()); 
+          float ptRel = ((ijet->p4().Vect()-ielectron->p4().Vect()).Cross(ielectron->p4().Vect())).R()/ijet->p4().Vect().R();
+          if (dR < 0.5 && ptRel > softLepPtRelMax) {
+            softLepPt       = ielectron->pt();
+            softLepDR       = dR;
+            softLepPtRel    = ptRel; 
+            softLepId       = 1;
+            softLepPtRelMax = ptRel;
+            softLepSigDB3D  = 0;
+            if (ielectron->dB3D() != 0) {
+              softLepSigDB3D = ielectron->edB3D()/ielectron->dB3D();
+            } 
+          }
+        }
+        regPt_->push_back((jetReg_->getTarget(*ijet,dphiJetMet,*rho,(*met)[0].et(),softLepPt,softLepPtRel))[0]/ijet->pt());
+        regE_ ->push_back((jetReg_->getTarget(*ijet,dphiJetMet,*rho,(*met)[0].et(),softLepPt,softLepPtRel))[0]/ijet->pt());
         if (saveJetProperties_) {
+          softLepPt_     ->push_back(softLepPt);
+          softLepDR_     ->push_back(softLepDR); 
+          softLepPtRel_  ->push_back(softLepPtRel);
+          softLepSigDB3D_->push_back(softLepSigDB3D);
+          softLepId_     ->push_back(softLepId);
           ptD_           ->push_back(ijet->ptd());
           ptD_QC_        ->push_back(ijet->ptdQC());
           vtx3dL_        ->push_back(ijet->vtx3dL());
           vtx3deL_       ->push_back(ijet->vtx3deL());
           vtxPt_         ->push_back(ijet->vtxPt());
+          vtxMass_       ->push_back(ijet->secvtxMass());
           part_          ->push_back(npr);
           axisMajor_     ->push_back(ijet->axisMajor());
           axisMinor_     ->push_back(ijet->axisMinor());
@@ -545,6 +744,7 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
           axisMinor_QC_  ->push_back(ijet->axisMinorQC());
           pull_          ->push_back(ijet->pull());
           pull_QC_       ->push_back(ijet->pullQC());
+          leadTrkPt_     ->push_back(ijet->fmaxCharged()*ijet->pt()*ijet->rawFactor());
           jetR_          ->push_back(ijet->fmax());
           jetRChg_QC_    ->push_back(ijet->fmaxCharged());
           nChg_ptCut_    ->push_back(ijet->nChargedPtCut());
@@ -562,13 +762,23 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
     if (!iEvent.isRealData()) {
       //---------- genjets ------------------
       if (savePartons_) {
-        iEvent.getByLabel(srcGenJets_, genjets);
-        //for(reco::GenJetCollection::const_iterator igen = genjets->begin();igen != genjets->end(); ++igen) {
-        for(std::vector<cmg::PhysicsObjectWithPtr<edm::Ptr<reco::GenJet> > >::const_iterator igen = genjets->begin();igen != genjets->end(); ++igen) {
-          genjetPt_ ->push_back(igen->pt());
-          genjetEta_->push_back(igen->eta());
-          genjetPhi_->push_back(igen->phi());
-          genjetE_  ->push_back(igen->energy()); 
+        if (srcGenJets_ == edm::InputTag("ak5GenJets")) {
+          iEvent.getByLabel(srcGenJets_, genjets);
+          for(reco::GenJetCollection::const_iterator igen = genjets->begin();igen != genjets->end(); ++igen) {
+            genjetPt_ ->push_back(igen->pt());
+            genjetEta_->push_back(igen->eta());
+            genjetPhi_->push_back(igen->phi());
+            genjetE_  ->push_back(igen->energy());
+          }
+        }
+        else {
+          iEvent.getByLabel(srcGenJets_, cmggenjets);
+          for(std::vector<cmg::PhysicsObjectWithPtr<edm::Ptr<reco::GenJet> > >::const_iterator igen = cmggenjets->begin();igen != cmggenjets->end(); ++igen) {
+            genjetPt_ ->push_back(igen->pt());
+            genjetEta_->push_back(igen->eta());
+            genjetPhi_->push_back(igen->phi());
+            genjetE_  ->push_back(igen->energy()); 
+          }
         }// genjet loop
         //---------- partons ------------------
         iEvent.getByLabel(srcGenParticles_, genParticles);
@@ -581,7 +791,7 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
               ndst3++; 
             }
 	  }
-          if (ndst3 > 0) continue;
+          if (ndst3 > 0) continue; 
           partonId_ ->push_back(p.pdgId());
 	  partonSt_ ->push_back(p.status()); 
           partonPt_ ->push_back(p.pt());
@@ -649,8 +859,22 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
       } 
       //----- order jets according to the blik value -----
       order(*blikNOM_,blikNOMIdx_,4);
-      order(*blikVBF_,blikVBFIdx_,4);
-
+      order(*blikVBF_,blikVBFIdx_,4); 
+      //----- loop over all jet pairs that pass the VBF trigger logic and find the one with the largest mass ---
+      float mjjmax = 0;
+      for(int j1=0;j1<4;j1++) {
+        for(int j2=j1+1;j2<4;j2++) {
+          if ((*pt_)[j1] > 35 && (*pt_)[j2] > 35) {
+            float mjj = (vaJES[j1]*vP4[j1]+vaJES[j2]*vP4[j2]).M();
+            if (mjj > mjjmax) {
+              mjjmax = mjj;
+              mjjTrig_ = mjjmax;
+              dEtaTrig_ = fabs((*eta_)[j1]-(*eta_)[j2]);
+            }
+          }
+        }
+      }
+      //------------------------------------------------------------------------ 
       b1_[0] = (*btagIdx_)[0]; 
       b2_[0] = (*btagIdx_)[1];
       q1_[0] = (*btagIdx_)[2];
@@ -663,30 +887,38 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
       b2_[2] = (*blikVBFIdx_)[1];
       q1_[2] = (*blikVBFIdx_)[2];
       q2_[2] = (*blikVBFIdx_)[3];
+      b1_[3] = (*etaIdx_)[1]; 
+      b2_[3] = (*etaIdx_)[2];
+      q1_[3] = (*etaIdx_)[0];
+      q2_[3] = (*etaIdx_)[3];
       float sumE(0.0),sumPz(0.0);
       vector<TLorentzVector> vRegP4;
       for(int i=0;i<4;i++) {
         sumE  += vaJES[i]*vP4[i].Energy();
         sumPz += vaJES[i]*vP4[i].Pz();
         TLorentzVector p4(0,0,0,0);
-        p4.SetPtEtaPhiE((*regPt_)[i]*(*pt_)[i],(*eta_)[i],(*phi_)[i],(*regE_)[i]*(*energy_)[i]);
+        if (jetReg_massless_) {
+          p4.SetPtEtaPhiM((*regPt_)[i]*(*pt_)[i],(*eta_)[i],(*phi_)[i],0);
+        } 
+        else {
+          p4.SetPtEtaPhiE((*regPt_)[i]*(*pt_)[i],(*eta_)[i],(*phi_)[i],(*regE_)[i]*(*energy_)[i]);
+        }
         vRegP4.push_back(p4);
       }
       x1_ = (sumE+sumPz)/8000;
       x2_ = (sumE-sumPz)/8000;
-      dEtaMax_    = fabs((*eta_)[(*etaIdx_)[0]]-(*eta_)[(*etaIdx_)[3]]);
-      for(int k=0;k<3;k++) {
+      for(int k=0;k<4;k++) {
         dEtabb_[k]     = fabs((*eta_)[b1_[k]]-(*eta_)[b2_[k]]);
         dEtaqq_[k]     = fabs((*eta_)[q1_[k]]-(*eta_)[q2_[k]]);
         mbb_[k]        = (vaJES[b1_[k]]*vP4[b1_[k]]+vaJES[b2_[k]]*vP4[b2_[k]]).M();
-        //mbbReg_[k]     = (vaJES[b1_[k]]*(*reg_)[b1_[k]]*vP4[b1_[k]]+vaJES[b2_[k]]*(*reg_)[b2_[k]]*vP4[b2_[k]]).M();
         mbbReg_[k]     = (vaJES[b1_[k]]*vRegP4[b1_[k]]+vaJES[b2_[k]]*vRegP4[b2_[k]]).M();   
         mqq_[k]        = (vaJES[q1_[k]]*vP4[q1_[k]]+vaJES[q2_[k]]*vP4[q2_[k]]).M();
         ptbb_[k]       = (vaJES[b1_[k]]*vP4[b1_[k]]+vaJES[b2_[k]]*vP4[b2_[k]]).Pt();
+        etabb_[k]      = (vaJES[b1_[k]]*vP4[b1_[k]]+vaJES[b2_[k]]*vP4[b2_[k]]).Eta();
         dPhibb_[k]     = fabs(deltaPhi((*phi_)[b1_[k]],(*phi_)[b2_[k]]));
         dPhiqq_[k]     = fabs(deltaPhi((*phi_)[q1_[k]],(*phi_)[q2_[k]])); 
-        yStarqq_[k]    = 0.5*(vP4[q1_[k]].Rapidity()-vP4[q2_[k]].Rapidity());
-        yBoostqq_[k]   = 0.5*(vP4[q1_[k]].Rapidity()+vP4[q2_[k]].Rapidity());
+        etaRatio_[k]   = etabb_[k]/TMath::Max(fabs((*eta_)[q1_[k]]),fabs((*eta_)[q2_[k]]));
+        ptRatio_[k]    = ptbb_[k]/TMath::Max(fabs((*pt_)[q1_[k]]),fabs((*pt_)[q2_[k]]));
         //----- plane angle at the qqbb rest frame ------
         TLorentzVector cmP4 = vP4[b1_[k]]+vP4[b2_[k]]+vP4[q1_[k]]+vP4[q2_[k]];
         TVector3 vb = cmP4.BoostVector();
@@ -700,48 +932,43 @@ void VbfHbbFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup c
         cmP4q2.Boost(-vb);
         cosTheta_[k] = cos(((cmP4q1.Vect()).Cross(cmP4q2.Vect())).Angle((cmP4b1.Vect()).Cross(cmP4b2.Vect())));
       }
-      mvaNOM_ = discrNOM_->eval(mqq_[1],dEtaqq_[1],dPhiqq_[1],(*btag_)[b1_[1]],(*btag_)[b2_[1]],(*qgl_)[b1_[1]],(*qgl_)[b2_[1]],(*qgl_)[q1_[1]],(*qgl_)[q2_[1]],softHt_,nSoftJets2_,cosTheta_[1],x1_,x2_,ht_);
-      mvaVBF_ = discrVBF_->eval(mqq_[2],dEtaqq_[2],dPhiqq_[2],(*btag_)[b1_[2]],(*btag_)[b2_[2]],(*qgl_)[b1_[2]],(*qgl_)[b2_[2]],(*qgl_)[q1_[2]],(*qgl_)[q2_[2]],softHt_,nSoftJets2_,cosTheta_[2],x1_,x2_,ht_);
+      mvaNOM_ = discrNOM_->eval(mqq_[1],dEtaqq_[1],dPhiqq_[1],(*btag_)[b1_[0]],(*btag_)[b2_[0]],(*qgl_)[b1_[1]],(*qgl_)[b2_[1]],(*qgl_)[q1_[1]],(*qgl_)[q2_[1]],softHt_,nSoftJets2_,cosTheta_[1],x1_,x2_,sphericity_,aplanarity_,etaRatio_[1],ptRatio_[1]);
 
-      bool cut_Btag = ((*btagM_)[b1_[0]] && (*btagL_)[b2_[0]]);
-      if ((*pt_)[0]>70 && (*pt_)[1]>55 && (*pt_)[2]>40 && (*pt_)[3]>20) {
-        for (int i=0;i<3;i++) { 
-          if (dEtaqq_[i]>2.0 && mqq_[i]>200) {
-            selNOMsoft_[i] = true;
+      mvaVBF_ = discrVBF_->eval(mqq_[2],dEtaqq_[2],dPhiqq_[2],(*btag_)[b1_[0]],(*btag_)[b2_[0]],(*qgl_)[b1_[2]],(*qgl_)[b2_[2]],(*qgl_)[q1_[2]],(*qgl_)[q2_[2]],softHt_,nSoftJets2_,cosTheta_[2],x1_,x2_,sphericity_,aplanarity_,etaRatio_[2],ptRatio_[2]);
+
+      mvaNOMnoLep_ = discrNOM_->eval(mqq_[1],dEtaqq_[1],dPhiqq_[1],(*btag_)[b1_[0]],(*btag_)[b2_[0]],(*qgl_)[b1_[1]],(*qgl_)[b2_[1]],(*qgl_)[q1_[1]],(*qgl_)[q2_[1]],softHtnoLep_,nSoftJets2noLep_,cosTheta_[1],x1_,x2_,sphericity_,aplanarity_,etaRatio_[1],ptRatio_[1]);
+
+      mvaVBFnoLep_ = discrVBF_->eval(mqq_[2],dEtaqq_[2],dPhiqq_[2],(*btag_)[b1_[0]],(*btag_)[b2_[0]],(*qgl_)[b1_[2]],(*qgl_)[b2_[2]],(*qgl_)[q1_[2]],(*qgl_)[q2_[2]],softHtnoLep_,nSoftJets2noLep_,cosTheta_[2],x1_,x2_,sphericity_,aplanarity_,etaRatio_[2],ptRatio_[2]);
+
+      bool cut_Btag_NOM = ((*btagL_)[b1_[0]] && (*btagL_)[b2_[0]]);
+      bool cut_Btag_VBF = ((*btagM_)[b1_[0]] && (*btagL_)[b2_[0]]);
+
+      if (cut_Btag_NOM && dPhibb_[1]<dPhiMax_) {
+        if ((*pt_)[0]>70 && (*pt_)[1]>55 && (*pt_)[2]>40 && (*pt_)[3]>30 && dEtaqq_[1]>2.0 && mqq_[1]>200) {
+          selNOMsoft_ = true;
+          if ((*pt_)[0]>80 && (*pt_)[1]>70 && (*pt_)[2]>50 && (*pt_)[3]>40 && dEtaqq_[1]>2.5 && mqq_[1]>250) {
+            selNOM_ = true;
           }
-        } 
+        }
       } 
-      if ((*pt_)[0]>80 && (*pt_)[1]>65 && (*pt_)[2]>50 && (*pt_)[3]>35) {
-        for (int i=0;i<3;i++) { 
-          if (dEtaqq_[i]>2.5 && mqq_[i]>250) {
-            selNOM_[i] = true;
-          }
-        }
-      }
-      if (ht_>150 && cut_Btag) {
-        for (int i=0;i<3;i++) { 
-          if (dEtaqq_[i]>3.0 && mqq_[i]>500) {
-            selVBFsoft_[i] = true;
-          }
-        }
-      }
-      if (ht_>350 && cut_Btag) {
-        for (int i=0;i<3;i++) { 
-          if (dEtaqq_[i]>3.5 && mqq_[i]>800) {
-            selVBF_[i] = true;
-          }
+      if (cut_Btag_VBF && dPhibb_[2]<dPhiMax_ && (*pt_)[3]>30 && 0.5*((*pt_)[0]+(*pt_)[1])>80) {
+        if (dEtaqq_[2] > 3.0 && mqq_[2] > 300 && dEtaTrig_ > 3.0 && mjjTrig_ > 300) {
+          selVBFsoft_ = true;
+          if (dEtaqq_[2] > 3.5 && mqq_[2] > 700 && dEtaTrig_ > 3.5 && mjjTrig_ > 700) {
+            selVBF_ = true;
+          } 
         }
       }
       //--------------------------------------------------------------
       bool SELECTION(false);
       if (forceNOM_) {
-        SELECTION += (selNOMsoft_[0] || selNOMsoft_[1] || selNOMsoft_[2]);
+        SELECTION = selNOMsoft_;
       }
       if (forceVBF_) {
-        SELECTION += (selVBFsoft_[0] || selVBFsoft_[1] || selVBFsoft_[2]);
+        SELECTION = selVBFsoft_;
       }
       if (!forceNOM_ && !forceVBF_) {
-        SELECTION = (dEtaqq_[0]>dEtaMin_ || dEtaqq_[1]>dEtaMin_ || dEtaqq_[2]>dEtaMin_);
+        SELECTION = cut_Btag_NOM && ((dEtaqq_[1]>dEtaMin_ && dPhibb_[1]<dPhiMax_) || (dEtaqq_[2]>dEtaMin_ && dPhibb_[2]<dPhiMax_));
       }
       if (SELECTION) { 
         outTree_->Fill();     
@@ -774,21 +1001,22 @@ void VbfHbbFlatTreeProducer::order(vector<float> const& v, vector<int>* idx, int
 //////////////////////////////////////////////////////////////////////////////////////////
 void VbfHbbFlatTreeProducer::initialize()
 {
-  for(int i=0;i<3;i++) {
-    selNOM_[i]     = false;
-    selVBF_[i]     = false;
-    selNOMsoft_[i] = false;
-    selVBFsoft_[i] = false;
+  selVBF_     = false;
+  selVBFsoft_ = false;
+  selNOM_     = false;   
+  selNOMsoft_ = false;
+  for(int i=0;i<4;i++) {
     cosTheta_[i]   = -999;
     mbb_[i]        = -999;
     mbbReg_[i]     = -999;
     dEtaqq_[i]     = -999;
     dEtabb_[i]     = -999;
-    yBoostqq_[i]   = -999;
-    yStarqq_[i]    = -999;
     dPhiqq_[i]     = -999;
     dPhibb_[i]     = -999;
     ptbb_[i]       = -999;
+    etabb_[i]      = -999;
+    etaRatio_[i]   = -999;
+    ptRatio_[i]    = -999;
     b1_[i]         = -999;
     b2_[i]         = -999;
     q1_[i]         = -999;
@@ -801,21 +1029,33 @@ void VbfHbbFlatTreeProducer::initialize()
   nSoftJets_      = -999;
   nSoftJets2_     = -999;
   nSoftJets5_     = -999;
+  nSoftJets2noLep_= -999;
   nJets_          = -999;
   nBJets_         = -999;
+  nLeptons_       = -999;
   rho_            = -999;
   met_            = -999;
   metPhi_         = -999;
   metSig_         = -999;
   ht_             = -999;
   softHt_         = -999;
+  softHtnoLep_    = -999;
   sphericity_     = -999;
   aplanarity_     = -999;
-  dEtaMax_        = -999;
   x1_             = -999;
   x2_             = -999;
   mvaNOM_         = -999;
   mvaVBF_         = -999;
+  mvaNOMnoLep_    = -999;
+  mvaVBFnoLep_    = -999;
+  mjjTrig_        = -999; 
+  dEtaTrig_       = -999; 
+  lepChId_        ->clear();
+  lepIso_         ->clear();
+  lepPt_          ->clear();
+  lepEta_         ->clear();
+  lepPhi_         ->clear();
+  lepE_           ->clear();
   pt_             ->clear();
   eta_            ->clear();
   phi_            ->clear();
@@ -830,7 +1070,6 @@ void VbfHbbFlatTreeProducer::initialize()
   jec_            ->clear();
   regPt_          ->clear();
   regE_           ->clear();
-  csv_            ->clear();
   btag_           ->clear();
   btagIdx_        ->clear();
   blikNOM_        ->clear();
@@ -857,6 +1096,12 @@ void VbfHbbFlatTreeProducer::initialize()
     vtx3dL_         ->clear();
     vtx3deL_        ->clear();
     vtxPt_          ->clear();
+    vtxMass_        ->clear();
+    softLepPt_      ->clear();
+    softLepPtRel_   ->clear();
+    softLepDR_      ->clear();
+    softLepSigDB3D_ ->clear();
+    softLepId_      ->clear();
     part_           ->clear();
     axisMinor_      ->clear();
     axisMajor_      ->clear();
@@ -865,6 +1110,7 @@ void VbfHbbFlatTreeProducer::initialize()
     pull_           ->clear(); 
     pull_QC_        ->clear();
     jetR_           ->clear();
+    leadTrkPt_      ->clear();
     jetRChg_QC_     ->clear();
     nChg_QC_        ->clear();
     nChg_ptCut_     ->clear();
@@ -894,30 +1140,146 @@ void VbfHbbFlatTreeProducer::initialize()
   }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
-void VbfHbbFlatTreeProducer::fillPuWeights()
+float VbfHbbFlatTreeProducer::shiftCSV(float value)
 {
-  edm::FileInPath f1("KKousour/CMGAnalysis/data/pu2012DCONLY.root");
-  TFile *inf = new TFile(TString(f1.fullPath()));
-  TH1D *puRef = (TH1D*)inf->Get("pileup");
-  puRef->Sumw2();
-  puRef->Rebin(25);
-  puRef->Scale(1./puRef->Integral());
+  float x1,x2,y1,y2,result(-1.0);
+  if (value >=0 && value < 0.1875) {
+    x1 = 0;
+    x2 = 0.1875;
+    y1 = 0;
+    y2 = 0.244;
+  }
+  else if (value >= 0.1875 && value < 0.7125) {
+    y1 = 0.244;
+    y2 = 0.679;
+    x1 = 0.1875;
+    x2 = 0.7125;
+  }
+  else if (value >= 0.7125 && value < 0.8875) {
+    y1 = 0.679;
+    y2 = 0.898;
+    x1 = 0.7125;
+    x2 = 0.8875;
+  }
+  else if (value >= 0.8875) {
+    y1 = 0.898;
+    y2 = 1.0;
+    x1 = 0.8875;
+    x2 = 1.0;
+  }
+  else {
+    return value;
+  }
+  float z1 = y1*(x2-value)/(x2-x1);
+  float z2 = y2*(value-x1)/(x2-x1);
+  result = z1+z2;
+  return result;
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+float VbfHbbFlatTreeProducer::shiftQGL(float value)
+{
+  float result = 0.5*(tanh(0.98*TMath::ATanH(2*value-1)+0.02)+1);
+  return result;
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+float VbfHbbFlatTreeProducer::getSF(TH2 *h, float x, float y, bool interpolate)
+{
+  float result(1.0);
+  if (interpolate) {
+    float x_1 = h->GetXaxis()->GetBinCenter(1);
+    float x_2 = h->GetXaxis()->GetBinCenter(h->GetNbinsX());
+    float y_1 = h->GetYaxis()->GetBinCenter(1);
+    float y_2 = h->GetYaxis()->GetBinCenter(h->GetNbinsY());
+    float x0 = x;
+    float y0 = y;
+    if (x < x_1) {
+      x0 = x_1; 
+    } 
+    if (x > x_2) {
+      x0 = x_2;
+    }
+    if (y < y_1) {
+      y0 = y_1; 
+    } 
+    if (y > y_2) {
+      y0 = y_2;
+    }
+    result = h->Interpolate(x0,y0);
+  }
+  else {
+    int bin = h->FindBin(x,y);
+    result = h->GetBinContent(bin);
+  }
+  return result;
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void VbfHbbFlatTreeProducer::fillWeights()
+{
+  char name[1000];
+  //------ pu weights ----------------------
   puHisto_->Scale(1./puHisto_->Integral());
-  TH1D *puWeightHisto = (TH1D*)puRef->Clone("puWeight");
-  puWeightHisto->Divide(puHisto_);
-  float wt(1.0);
-  int npu;
-  TBranch *b = outTree_->Branch("puWt",&wt,"wt/F");
-  outTree_->SetBranchAddress("npu",&npu);
-  cout<<"Filling tree with pu weight"<<endl;
+  edm::FileInPath fPu[5] = {
+    edm::FileInPath("KKousour/CMGAnalysis/data/pu2012DCONLY.root"),
+    edm::FileInPath("KKousour/CMGAnalysis/data/pileUp_DiJet35.root"),
+    edm::FileInPath("KKousour/CMGAnalysis/data/pileUp_DiPFJetAve40.root"),
+    edm::FileInPath("KKousour/CMGAnalysis/data/pileUp_DiPFJetAve80.root"),
+    edm::FileInPath("KKousour/CMGAnalysis/data/pileUp_PFJet80.root")
+  };
+  TFile *puf[5];
+  TH1D *puRef[5],*puWeightHisto[5];
+  for(int i=0;i<5;i++) {
+    puf[i]   = new TFile(TString(fPu[i].fullPath()));
+    puRef[i] = (TH1D*)puf[i]->Get("pileup_trunc");
+    puRef[i]->Sumw2();
+    puRef[i]->Rebin(25);
+    puRef[i]->Scale(1./puRef[i]->Integral());
+    sprintf(name,"puWeight%d",i);
+    puWeightHisto[i] = (TH1D*)puRef[i]->Clone(name);
+    puWeightHisto[i]->Divide(puHisto_);
+  }
+  //------ trigger weights -----------------
+  edm::FileInPath fNOM("KKousour/CMGAnalysis/data/TriggerScaleFactorNOM.root");
+  edm::FileInPath fVBF("KKousour/CMGAnalysis/data/TriggerScaleFactorVBF.root");
+  TFile *trigNOMf = new TFile(TString(fNOM.fullPath()));
+  TFile *trigVBFf = new TFile(TString(fVBF.fullPath()));
+  TH2F *trigMapNOMHisto1 = (TH2F*)trigNOMf->Get("SF1");
+  TH2F *trigMapNOMHisto2 = (TH2F*)trigNOMf->Get("SF2");
+  TH2F *trigMapVBFHisto  = (TH2F*)trigVBFf->Get("SF");
+  int npu,b1[4],b2[4];
+  float puWt[5] = {1.0,1.0,1.0,1.0,1.0};
+  float trigWtNOM[2],trigWtVBF,mqq[4],dEtaqq[4];
+  vector<float> *btag(0);
+  TBranch *br1 = outTree_->Branch("puWt"     ,&puWt     ,"puWt[5]/F");
+  TBranch *br2 = outTree_->Branch("trigWtVBF",&trigWtVBF,"trigWtVBF/F");
+  TBranch *br3 = outTree_->Branch("trigWtNOM",&trigWtNOM,"trigWtNOM[2]/F");
+  outTree_->SetBranchAddress("npu"    ,&npu);
+  outTree_->SetBranchAddress("mqq"    ,&mqq);
+  outTree_->SetBranchAddress("dEtaqq" ,&dEtaqq);
+  outTree_->SetBranchAddress("jetBtag",&btag);
+  outTree_->SetBranchAddress("b1"     ,&b1);
+  outTree_->SetBranchAddress("b2"     ,&b2);
+  cout<<"Filling tree with weights"<<endl;
   for(int i=0;i<outTree_->GetEntries();i++) {
     outTree_->GetEvent(i);
-    wt = puWeightHisto->GetBinContent(puWeightHisto->FindBin(npu));
-    b->Fill();
+    for(int j=0;j<5;j++) {
+      puWt[j] = puWeightHisto[j]->GetBinContent(puWeightHisto[j]->FindBin(npu));
+    }
+    trigWtNOM[0] = getSF(trigMapNOMHisto1,(*btag)[b1[0]],(*btag)[b2[0]],false);
+    trigWtNOM[1] = getSF(trigMapNOMHisto2,(*btag)[b1[0]],mqq[1],false);
+    trigWtVBF    = getSF(trigMapVBFHisto,dEtaqq[2],mqq[2],true);
+    br1->Fill();
+    br2->Fill();
+    br3->Fill();
   }
-  inf->Close();
-  delete inf;
-  delete puRef; 
+  for(int i=0;i<5;i++) {
+    puf[i]->Close();
+    delete puf[i]; 
+  }
+  trigNOMf->Close();
+  trigVBFf->Close();
+  delete trigNOMf;
+  delete trigVBFf;
+  cout<<"Ended weights"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 VbfHbbFlatTreeProducer::~VbfHbbFlatTreeProducer() 

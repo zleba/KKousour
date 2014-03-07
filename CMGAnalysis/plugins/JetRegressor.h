@@ -10,11 +10,11 @@ class JetRegressor
   public:
     JetRegressor(std::string weights);
     ~JetRegressor();
-    std::vector<float> getTarget(cmg::PFJet const& jet,float jetMetPhi,float rho,float met);
+    std::vector<float> getTarget(cmg::PFJet const& jet,float jetMetPhi,float rho,float met,float softLepPt,float softLepPtRel);
     
   private:
     std::string weights_;
     TMVA::Reader *reader_;
-    float var_[15];
+    float var_[14];
 };
 #endif
