@@ -2,7 +2,7 @@ void DrawVariable(TString SEL,TString VAR,bool SHAPE,int NBINS,float XMIN,float 
 {
   gROOT->ForceStyle();
   TString FileName[5] = {"TTH","TTJets","QCD250","QCD500","QCD1000"};
-  float XSEC[5]       = {0.46*0.577*0.5085,0.46*424.5,670500,26740,769.7};
+  float XSEC[5]       = {0.46*0.577*0.5085,0.46*832,670500,26740,769.7};
   float LUMI(10000);
   TFile *inf[5];
   TTree *tr[5];
