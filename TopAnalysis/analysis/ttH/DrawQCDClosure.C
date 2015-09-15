@@ -1,42 +1,37 @@
-void DrawQCDClosure(TString SEL,TString VAR,int NBINS,float XMIN,float XMAX,TString XTITLE)
+void DrawQCDClosure(TString VAR,TString XTITLE)
 {
   gROOT->ForceStyle();
-  TString FileName[3] = {"QCD250","QCD500","QCD1000"};
-  float XSEC[3]       = {670500,26740,769.7};
-  TFile *inf[3];
-  TTree *tr[3],*tr1[3];
-  TH1F  *h[3],*h1[3];
-  TCut CUT(SEL);
+  TString FileName[6] = {"QCD_HT300to500","QCD_HT500to700","QCD_HT700to1000","QCD_HT1000to1500","QCD_HT1500to2000","QCD_HT2000toInf"};
+  float XSEC[6]       = {3.67e+5,2.94e+4,6.524e+03,1.064e+03,121.5,2.542e+01};
+  TFile *inf[6];
+  TH1F  *h[6],*h1[6];
 
   TCanvas *can = new TCanvas("can_QCDClosure_"+VAR,"can_QCDClosure_"+VAR,900,600);
   can->cd(1);
   can->SetBottomMargin(0.3);
   can->SetRightMargin(0.15);
 
-  for(int i=0;i<2;i++) {
-    inf[i] = TFile::Open("flatTree_"+FileName[i]+".root");
-    tr[i]  = (TTree*)inf[i]->Get("hadtopNoBtag/events");
-    tr1[i] = (TTree*)inf[i]->Get("hadtop/events");
-    TH1F *hpu = (TH1F*)inf[i]->Get("hadtop/pileup");
-    h[i]   = new TH1F("h_"+FileName[i],"h_"+FileName[i],NBINS,XMIN,XMAX);
-    h1[i]  = new TH1F("h1_"+FileName[i],"h1_"+FileName[i],NBINS,XMIN,XMAX);
+  for(int i=0;i<6;i++) {
+    inf[i] = TFile::Open("Histo_"+FileName[i]+".root");
+    TH1F *hTriggerPass = (TH1F*)inf[i]->Get("hadtopL1/TriggerPass");
+    h[i]   = (TH1F*)inf[i]->Get("hadtopL1/h_"+VAR);
+    h1[i]   = (TH1F*)inf[i]->Get("hadtop/h_"+VAR);
     h[i]->Sumw2();
     h1[i]->Sumw2();
-    //tr[i]->Draw(VAR+">>"+"h_"+FileName[i],"(1.11-0.000162845*ht)*(nBJets>1 && mva>-0.5)");
-    tr[i]->Draw(VAR+">>"+"h_"+FileName[i],"nBJets>1 && mva>-1 && ht>400 && jetPt[5]>20 && chi2<10");
-    tr1[i]->Draw(VAR+">>"+"h1_"+FileName[i],"nBJets>1 && mva>-1 && ht>400 && jetPt[5]>20 && chi2<10");
-    h[i]->Scale(XSEC[i]/hpu->GetEntries());
-    h1[i]->Scale(XSEC[i]/hpu->GetEntries());
-    cout<<hpu->GetEntries()<<endl;
+    h[i]->Rebin(2);
+    h1[i]->Rebin(2);
+    h[i]->Scale(XSEC[i]/hTriggerPass->GetBinContent(1));
+    h1[i]->Scale(XSEC[i]/hTriggerPass->GetBinContent(1));
+    cout<<hTriggerPass->GetBinContent(1)<<endl;
   }
 
   TH1F *hQCD = (TH1F*)h[0]->Clone("hQCD");
   hQCD->Add(h[1]);
-  //hQCD->Add(h[2]); 
+  hQCD->Add(h[2]); 
   hQCD->SetFillColor(kGray);
   TH1F *hQCD1 = (TH1F*)h1[0]->Clone("hQCD1");
   hQCD1->Add(h1[1]);
-  //hQCD1->Add(h1[2]);
+  hQCD1->Add(h1[2]);
 
   hQCD->Scale(1./hQCD->Integral());
   hQCD1->Scale(1./hQCD1->Integral());
@@ -58,8 +53,6 @@ void DrawQCDClosure(TString SEL,TString VAR,int NBINS,float XMIN,float XMAX,TStr
 
   TH1F *hRatio = (TH1F*)hQCD1->Clone("Ratio");
   hRatio->Divide(hQCD);
-  TF1 *fit = new TF1("fit","[0]+[1]*TMath::Erf([2]*x+[3])",200,2000);
-  fit->SetParameters(0.5,0.5,0.01,1);
 
   TPad* pad = new TPad("pad", "pad", 0., 0., 1., 1.);
   pad->SetTopMargin(0.7);
@@ -73,7 +66,6 @@ void DrawQCDClosure(TString SEL,TString VAR,int NBINS,float XMIN,float XMAX,TStr
   hRatio->GetYaxis()->SetNdivisions(505);
   hRatio->GetYaxis()->SetRangeUser(0,2);
   hRatio->GetYaxis()->SetLabelSize(0.04);
- // hRatio->Fit(fit,"R");
   hRatio->Draw();
 }
 
