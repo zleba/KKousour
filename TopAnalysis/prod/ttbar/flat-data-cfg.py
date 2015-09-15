@@ -2,15 +2,18 @@ import FWCore.ParameterSet.Config as cms
 process = cms.Process('myprocess')
 process.TFileService=cms.Service("TFileService",fileName=cms.string('flatTree.root'))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
-process.GlobalTag.globaltag = '74X_mcRun2_asymptotic_v2'
+process.GlobalTag.globaltag = '74X_dataRun2_v2'
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
-    "/store/mc/RunIISpring15DR74/TT_TuneCUETP8M1_13TeV-powheg-pythia8/MINIAODSIM/Asympt25ns_MCRUN2_74_V9-v2/00000/0AB045B5-BB0C-E511-81FD-0025905A60B8.root",
-     " /store/mc/RunIISpring15DR74/TT_TuneCUETP8M1_13TeV-powheg-pythia8/MINIAODSIM/Asympt25ns_MCRUN2_74_V9-v2/00000/0CB01C19-BB0C-E511-860B-0025905A60A8.root",
-     "/store/mc/RunIISpring15DR74/TT_TuneCUETP8M1_13TeV-powheg-pythia8/MINIAODSIM/Asympt25ns_MCRUN2_74_V9-v2/00000/0E389719-BB0C-E511-A233-0025905A60F2.root",
-     "/store/mc/RunIISpring15DR74/TT_TuneCUETP8M1_13TeV-powheg-pythia8/MINIAODSIM/Asympt25ns_MCRUN2_74_V9-v2/00000/10590823-AA0C-E511-A3BC-00259073E388.root"
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/06947E9F-204A-E511-B627-02163E0137BA.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/18D18896-204A-E511-B82D-02163E01190D.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/260A1195-204A-E511-8627-02163E014125.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/6A03E597-204A-E511-B2EA-02163E01418B.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/7086989C-204A-E511-B943-02163E013409.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/7CA25D9B-204A-E511-BF7A-02163E011955.root",
+   "/store/data/Run2015C/JetHT/MINIAOD/PromptReco-v1/000/254/790/00000/823FA0A1-204A-E511-887F-02163E01453E.root"
     )
 )
 #############   Format MessageLogger #################
@@ -28,11 +31,11 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 #      toGet = cms.VPSet(
 #      cms.PSet(
 #            record = cms.string('JetCorrectionsRecord'),
-#            tag    = cms.string('JetCorrectorParametersCollection_Summer15_50nsV2_MC_AK4PFchs'),
+#            tag    = cms.string('JetCorrectorParametersCollection_Summer15_50nsV2_DATA_AK4PFchs'),
 #            label  = cms.untracked.string('AK4PFchs')
 #            ) 
 #      ), 
-#      connect = cms.string('sqlite:Summer15_50nsV2_MC.db')
+#      connect = cms.string('sqlite:Summer15_50nsV2_DATA.db')
 #)
 ## add an es_prefer statement to resolve a possible conflict from simultaneous connection to a global tag
 #process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
@@ -40,7 +43,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 process.load("PhysicsTools.PatAlgos.producersLayer1.jetUpdater_cff")
 process.patJetCorrFactorsReapplyJEC = process.patJetCorrFactorsUpdated.clone(
   src = cms.InputTag("slimmedJets"),
-  levels = ['L1FastJet','L2Relative','L3Absolute'],
+  levels = ['L1FastJet','L2Relative','L3Absolute','L2L3Residual'],
   payload = 'AK4PFchs' 
 ) 
 
@@ -52,7 +55,7 @@ process.patJetsReapplyJEC = process.patJetsUpdated.clone(
 
 process.patJetCorrFactorsReapplyJECAK8 = process.patJetCorrFactorsUpdated.clone(
   src = cms.InputTag("slimmedJetsAK8"),
-  levels = ['L1FastJet','L2Relative','L3Absolute'],
+  levels = ['L1FastJet','L2Relative','L3Absolute','L2L3Residual'],
   payload = 'AK4PFchs' 
 ) 
 
@@ -65,6 +68,7 @@ process.patJetsReapplyJECAK8 = process.patJetsUpdated.clone(
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='patJetsReapplyJEC',cut='pt>30 & abs(eta)<2.4')
 
+############# QGL #################
 process.load('RecoJets.JetProducers.QGTagger_cfi')
 process.QGTagger.srcJets   = cms.InputTag('goodJets')
 process.QGTagger.jetsLabel = cms.string('QGL_AK4PFchs')
@@ -82,8 +86,6 @@ process.hadtopBoost = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   btagMinThreshold = cms.double(0.814),
   btagMaxThreshold = cms.double(1.1),
   btagger          = cms.string('pfCombinedInclusiveSecondaryVertexV2BJetTags'),
-  pu               = cms.untracked.string("addPileupInfo"),
-  genparticles     = cms.untracked.InputTag('prunedGenParticles'),
   
   triggerNames     = cms.vstring(
     'HLT_AK8PFJet360_TrimMass30_v',
@@ -114,25 +116,23 @@ process.hadtop = cms.EDAnalyzer('TTbarFlatTreeProducer',
   btagMaxThreshold = cms.double(1.1),
   btagger          = cms.string('pfCombinedInclusiveSecondaryVertexV2BJetTags'),
   qgtagger         = cms.InputTag('QGTagger','qgLikelihood'),
-  pu               = cms.untracked.string("addPileupInfo"),
-  genparticles     = cms.untracked.InputTag('prunedGenParticles'),
   
   triggerNames     = cms.vstring(
-    'HLT_PFHT450_SixJet40_PFBTagCSV_v',
-    'HLT_PFHT450_SixJet40_v',
-    'HLT_PFHT400_SixJet30_BTagCSV0p5_2PFBTagCSV_v',
-    'HLT_PFHT400_SixJet30_v',
-    'HLT_PFHT200_v',
-    'HLT_PFHT250_v',
-    'HLT_PFHT300_v',
-    'HLT_PFHT350_v',
-    'HLT_PFHT400_v',
-    'HLT_PFJet60_v',
-    'HLT_PFJet80_v',
-    'HLT_PFJet140_v',
-    'HLT_DiPFJetAve60_v',
-    'HLT_DiPFJetAve80_v',
-    'HLT_DiPFJetAve140_v'
+   'HLT_PFHT450_SixJet40_PFBTagCSV0p72_v',
+   'HLT_PFHT450_SixJet40_v',
+   'HLT_PFHT400_SixJet30_BTagCSV0p55_2PFBTagCSV0p72_v',
+   'HLT_PFHT400_SixJet30_v',
+   'HLT_PFHT200_v',
+   'HLT_PFHT250_v',
+   'HLT_PFHT300_v',
+   'HLT_PFHT350_v',
+   'HLT_PFHT400_v',
+   'HLT_PFJet60_v',
+   'HLT_PFJet80_v',
+   'HLT_PFJet140_v',
+   'HLT_DiPFJetAve60_v',
+   'HLT_DiPFJetAve80_v',
+   'HLT_DiPFJetAve140_v'
   ),
   triggerResults   = cms.InputTag('TriggerResults','','HLT'),
   triggerPrescales = cms.InputTag('patTrigger')
@@ -151,13 +151,14 @@ process.kinFitTtFullHadEvent.maxNJets            = 8
 
 process.kinFitTtFullHadEventOneBtag = process.kinFitTtFullHadEvent.clone(bTags = 1)
 
+
 process.p = cms.Path(
    process.patJetCorrFactorsReapplyJEC +
    process.patJetCorrFactorsReapplyJECAK8 +
    process.patJetsReapplyJEC +
    process.patJetsReapplyJECAK8 +
    process.goodJets + 
-   process.QGTagger +  
+   process.QGTagger + 
    process.kinFitTtFullHadEvent + 
    process.kinFitTtFullHadEventOneBtag +
    process.hadtop +
