@@ -8,7 +8,7 @@
 void FillHistograms(TString SAMPLE)
 {
   cout<<"Processing sample "<<SAMPLE<<endl;
-  TString PATH("");
+  TString PATH("root://eoscms//eos/cms/store/cmst3/user/kkousour/ttH/flat/");
   TFile *inf  = TFile::Open(PATH+"flatTree_"+SAMPLE+".root");
   TFile *outf = TFile::Open(TString::Format("Histo_%s.root",SAMPLE.Data()),"RECREATE");
 

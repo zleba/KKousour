@@ -53,12 +53,6 @@ public :
    const Int_t kMaxqglAve = 1;
    const Int_t kMaxqglMin = 1;
    const Int_t kMaxqglMedian = 1;
-   const Int_t kMaxmH = 1;
-   const Int_t kMaxptH = 1;
-   const Int_t kMaxyH = 1;
-   const Int_t kMaxdRbbH = 1;
-   const Int_t kMaxbHIdx = 1;
-   const Int_t kMaxbTopIdx = 1;
    const Int_t kMaxmW = 1;
    const Int_t kMaxmTop = 1;
    const Int_t kMaxptTop = 1;
@@ -102,12 +96,6 @@ public :
    Float_t         qglAve;
    Float_t         qglMin;
    Float_t         qglMedian;
-   Float_t         mH;
-   Float_t         ptH;
-   Float_t         yH;
-   Float_t         dRbbH;
-   Int_t           bHIdx[2];
-   Int_t           bTopIdx[2];
    Float_t         mW[2];
    Float_t         mTop[2];
    Float_t         ptTop[2];
@@ -174,12 +162,6 @@ public :
    TBranch        *b_qglAve_;   //!
    TBranch        *b_qglMin_;   //!
    TBranch        *b_qglMedian_;   //!
-   TBranch        *b_mH_;   //!
-   TBranch        *b_ptH_;   //!
-   TBranch        *b_yH_;   //!
-   TBranch        *b_dRbbH_;   //!
-   TBranch        *b_bHIdx_;   //!
-   TBranch        *b_bTopIdx_;   //!
    TBranch        *b_mW_;   //!
    TBranch        *b_mTop_;   //!
    TBranch        *b_ptTop_;   //!
@@ -340,12 +322,6 @@ void TreeClass::Init(TTree *tree)
    fChain->SetBranchAddress("qglAve", &qglAve, &b_qglAve_);
    fChain->SetBranchAddress("qglMin", &qglMin, &b_qglMin_);
    fChain->SetBranchAddress("qglMedian", &qglMedian, &b_qglMedian_);
-   fChain->SetBranchAddress("mH", &mH, &b_mH_);
-   fChain->SetBranchAddress("ptH", &ptH, &b_ptH_);
-   fChain->SetBranchAddress("yH", &yH, &b_yH_);
-   fChain->SetBranchAddress("dRbbH", &dRbbH, &b_dRbbH_);
-   fChain->SetBranchAddress("bHIdx", bHIdx, &b_bHIdx_);
-   fChain->SetBranchAddress("bTopIdx", bTopIdx, &b_bTopIdx_);
    fChain->SetBranchAddress("mW", mW, &b_mW_);
    fChain->SetBranchAddress("mTop", mTop, &b_mTop_);
    fChain->SetBranchAddress("ptTop", ptTop, &b_ptTop_);

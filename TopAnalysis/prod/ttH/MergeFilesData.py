@@ -5,7 +5,7 @@ from KKousour.TopAnalysis.eostools import *
 path = '/store/cmst3/user/kkousour/ttH/'
  
 sample = [
-  '/JetHT/Run2015B-PromptReco-v1/'
+  '/JetHT/Run2015C-PromptReco-v1/'
 ]
 
 for ss in sample:
