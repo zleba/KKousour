@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<MethodSetup Method="Fisher::Fisher">
+  <GeneralInfo>
+    <Info name="TMVA Release" value="4.2.0 [262656]"/>
+    <Info name="ROOT Release" value="6.02/13 [393741]"/>
+    <Info name="Creator" value="kkousour"/>
+    <Info name="Date" value="Tue Mar  1 17:09:10 2016"/>
+    <Info name="Host" value="Linux vocms0301.cern.ch 2.6.32-573.7.1.el6.x86_64 #1 SMP Wed Sep 23 10:12:03 CEST 2015 x86_64 x86_64 x86_64 GNU/Linux"/>
+    <Info name="Dir" value="/afs/cern.ch/work/k/kkousour/private/CMSSW_7_6_3_patch1/src/KKousour/TopAnalysis/analysis/ttbar"/>
+    <Info name="Training events" value="160000"/>
+    <Info name="TrainingTime" value="1.27065897e-01"/>
+    <Info name="AnalysisType" value="Classification"/>
+  </GeneralInfo>
+  <Options>
+    <Option name="V" modified="No">False</Option>
+    <Option name="VerbosityLevel" modified="No">Default</Option>
+    <Option name="VarTransform" modified="No">None</Option>
+    <Option name="H" modified="No">False</Option>
+    <Option name="CreateMVAPdfs" modified="No">False</Option>
+    <Option name="IgnoreNegWeightsInTraining" modified="No">False</Option>
+    <Option name="Method" modified="No">Fisher</Option>
+  </Options>
+  <Variables NVar="4">
+    <Variable VarIndex="0" Expression="jetTau3[0]/jetTau2[0]" Label="jetTau3[0]/jetTau2[0]" Title="jetTau3[0]/jetTau2[0]" Unit="" Internal="jetTau3_0__D_jetTau2_0_" Type="F" Min="1.73496142e-01" Max="9.86998320e-01"/>
+    <Variable VarIndex="1" Expression="jetTau3[0]/jetTau1[0]" Label="jetTau3[0]/jetTau1[0]" Title="jetTau3[0]/jetTau1[0]" Unit="" Internal="jetTau3_0__D_jetTau1_0_" Type="F" Min="2.94496026e-02" Max="8.02117467e-01"/>
+    <Variable VarIndex="2" Expression="jetTau3[1]/jetTau2[1]" Label="jetTau3[1]/jetTau2[1]" Title="jetTau3[1]/jetTau2[1]" Unit="" Internal="jetTau3_1__D_jetTau2_1_" Type="F" Min="1.19652517e-01" Max="9.87545788e-01"/>
+    <Variable VarIndex="3" Expression="jetTau3[1]/jetTau1[1]" Label="jetTau3[1]/jetTau1[1]" Title="jetTau3[1]/jetTau1[1]" Unit="" Internal="jetTau3_1__D_jetTau1_1_" Type="F" Min="4.29032408e-02" Max="8.33779693e-01"/>
+  </Variables>
+  <Spectators NSpec="0"/>
+  <Classes NClass="2">
+    <Class Name="Signal" Index="0"/>
+    <Class Name="Background" Index="1"/>
+  </Classes>
+  <Transformations NTransformations="0"/>
+  <MVAPdfs/>
+  <Weights NCoeff="5">
+    <Coefficient Index="0" Value="2.1121038002914583e+00"/>
+    <Coefficient Index="1" Value="-1.0403378080573271e+00"/>
+    <Coefficient Index="2" Value="-9.9029945020444976e-01"/>
+    <Coefficient Index="3" Value="-6.4809271331041729e-01"/>
+    <Coefficient Index="4" Value="-1.4587811833329218e+00"/>
+  </Weights>
+</MethodSetup>
