@@ -9,6 +9,9 @@
 #include <vector>
 #include <cassert>
 #include "Math/SpecFuncMathMore.h"
+#include "Math/Vector3D.h"
+#include "Math/Vector4D.h"
+#include "Math/VectorUtil.h"
 #include "TFile.h"
 #include "TBranch.h"
 #include "TH1D.h"
@@ -21,84 +24,85 @@
 #include "TMatrixDSymEigen.h"
 
 #include "KKousour/TopAnalysis/plugins/TTHFlatTreeProducer.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/Common/interface/TriggerNames.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
-#include "DataFormats/Math/interface/deltaPhi.h"
-#include "DataFormats/Math/interface/deltaR.h"
-#include "DataFormats/PatCandidates/interface/Particle.h"
-#include "DataFormats/PatCandidates/interface/MET.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
-#include "DataFormats/JetReco/interface/JetCollection.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
-#include "DataFormats/JetReco/interface/GenJetCollection.h"
-#include "DataFormats/VertexReco/interface/Vertex.h"
-#include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 using namespace std;
 using namespace reco;
 
 TTHFlatTreeProducer::TTHFlatTreeProducer(edm::ParameterSet const& cfg) 
 {
-  srcJets_            = cfg.getParameter<edm::InputTag>                      ("jets");
-  srcMuons_           = cfg.getParameter<edm::InputTag>                      ("muons");
-  srcElectrons_       = cfg.getParameter<edm::InputTag>                      ("electrons");
-  srcMET_             = cfg.getParameter<edm::InputTag>                      ("met");
-  srcRho_             = cfg.getParameter<edm::InputTag>                      ("rho"); 
-  srcVtx_             = cfg.getParameter<edm::InputTag>                      ("vertices");
-  srcQGL_             = cfg.getParameter<edm::InputTag>                      ("qgtagger"); 
-  srcBtag_            = cfg.getParameter<std::string>                        ("btagger");
-  kinfit_             = cfg.getParameter<std::string>                        ("kinfit");
-  xmlFile_            = cfg.getParameter<std::string>                        ("xmlFile");
-  nJetsMin_           = cfg.getParameter<int>                                ("nJetsMin");
-  nBJetsMin_          = cfg.getParameter<int>                                ("nBJetsMin");
-  etaMax_             = cfg.getParameter<double>                             ("etaMax");
-  ptMin_              = cfg.getParameter<double>                             ("ptMin");
-  htMin_              = cfg.getParameter<double>                             ("htMin");
-  btagMinThreshold_   = cfg.getParameter<double>                             ("btagMinThreshold");
-  btagMaxThreshold_   = cfg.getParameter<double>                             ("btagMaxThreshold");
-  srcPU_              = cfg.getUntrackedParameter<std::string>               ("pu","");
-  srcGenParticles_    = cfg.getUntrackedParameter<edm::InputTag>             ("genparticles",edm::InputTag("")); 
-  triggerNames_       = cfg.getParameter<std::vector<std::string> >          ("triggerNames");
-  triggerResults_     = cfg.getParameter<edm::InputTag>                      ("triggerResults");
-  triggerPrescales_   = cfg.getParameter<edm::InputTag>                      ("triggerPrescales");
+  jetsToken             = consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
+  muonsToken            = consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
+  electronsToken        = consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
+  metToken              = consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
+  qgtaggerToken         = consumes<edm::ValueMap<float> >(cfg.getParameter<edm::InputTag>("qgtagger"));
+  rhoToken              = consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
+  recVtxsToken          = consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
+  triggerResultsToken   = consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults"));
+  triggerPrescalesToken = consumes<pat::PackedTriggerPrescales>(cfg.getParameter<edm::InputTag>("triggerPrescales"));
+  pupInfoToken          = consumes<edm::View<PileupSummaryInfo> >(edm::InputTag("slimmedAddPileupInfo"));
+  genEvtInfoToken       = consumes<GenEventInfoProduct>(edm::InputTag("generator"));
+  genParticlesToken     = consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"));
+  lheEvtInfoToken       = consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"));
+  runInfoToken          = consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"));
+  kinfit_               = cfg.getParameter<std::string>("kinfit");
+  vchi2Token            = consumes<edm::View<double> >(edm::InputTag(kinfit_,"Chi2"));
+  vprobToken            = consumes<edm::View<double> >(edm::InputTag(kinfit_,"Prob"));
+  vstatusToken          = consumes<edm::View<int> >(edm::InputTag(kinfit_,"Status"));
+  partonsBToken         = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsB"));
+  partonsBbarToken      = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsBBar"));
+  partonsQToken         = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightQ"));
+  partonsQbarToken      = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightQBar"));
+  partonsPToken         = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightP"));
+  partonsPbarToken      = consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightPBar"));
+  srcBtag_              = cfg.getParameter<std::string>                        ("btagger");
+  xmlFileQCD_           = cfg.getParameter<std::string>                        ("xmlFileQCD");
+  xmlFileTTbar_         = cfg.getParameter<std::string>                        ("xmlFileTTbar");
+  nJetsMin_             = cfg.getParameter<int>                                ("nJetsMin");
+  nBJetsMin_            = cfg.getParameter<int>                                ("nBJetsMin");
+  etaMax_               = cfg.getParameter<double>                             ("etaMax");
+  ptMin_                = cfg.getParameter<double>                             ("ptMin");
+  htMin_                = cfg.getParameter<double>                             ("htMin");
+  minMuPt_              = cfg.getParameter<double>                             ("minMuPt");
+  minElPt_              = cfg.getParameter<double>                             ("minElPt");
+  btagMinThreshold_     = cfg.getParameter<double>                             ("btagMinThreshold");
+  btagMaxThreshold_     = cfg.getParameter<double>                             ("btagMaxThreshold"); 
+  triggerNames_         = cfg.getParameter<std::vector<std::string> >          ("triggerNames");
+  isMC_                 = cfg.getUntrackedParameter<bool>                      ("isMC",false);
+  saveWeights_          = cfg.getUntrackedParameter<bool>                      ("saveWeights",false);
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void TTHFlatTreeProducer::beginJob() 
 {
   //--- book the trigger histograms ---------
   triggerNamesHisto_ = fs_->make<TH1F>("TriggerNames","TriggerNames",1,0,1);
-  triggerNamesHisto_->SetBit(TH1::kCanRebin);
+  triggerNamesHisto_->SetCanExtend(TH1::kAllAxes);
   for(unsigned i=0;i<triggerNames_.size();i++) {
     triggerNamesHisto_->Fill(triggerNames_[i].c_str(),1);
   }
   triggerPassHisto_ = fs_->make<TH1F>("TriggerPass","TriggerPass",1,0,1);
-  triggerPassHisto_->SetBit(TH1::kCanRebin);
+  triggerPassHisto_->SetCanExtend(TH1::kAllAxes);
 
   cutFlowHisto_ = fs_->make<TH1F>("CutFlow","CutFlow",1,0,1);
-  cutFlowHisto_->SetBit(TH1::kCanRebin);
+  cutFlowHisto_->SetCanExtend(TH1::kAllAxes);
   
-  //--- book the pileup histogram -----------
-  puHisto_ = fs_->make<TH1F>("pileup","pileup",40,0,40);
   //--- book the tree -----------------------
   outTree_ = fs_->make<TTree>("events","events");
   outTree_->Branch("runNo"                ,&run_               ,"run_/I");
   outTree_->Branch("evtNo"                ,&evt_               ,"evt_/I");
   outTree_->Branch("lumi"                 ,&lumi_              ,"lumi_/I");
   outTree_->Branch("nvtx"                 ,&nVtx_              ,"nVtx_/I");
+  outTree_->Branch("pvRho"                ,&pvRho_             ,"pvRho_/F");
+  outTree_->Branch("pvz"                  ,&pvz_               ,"pvz_/F");
+  outTree_->Branch("pvchi2"               ,&pvchi2_            ,"pvchi2_/F");
+  outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
   outTree_->Branch("nJets"                ,&nJets_             ,"nJets_/I");
   outTree_->Branch("nLeptons"             ,&nLeptons_          ,"nLeptons_/I");
   outTree_->Branch("nBJets"               ,&nBJets_            ,"nBJets_/I");
   outTree_->Branch("status"               ,&status_            ,"status_/I");
   outTree_->Branch("prob"                 ,&prob_              ,"prob_/F");
   outTree_->Branch("chi2"                 ,&chi2_              ,"chi2_/F");
-  outTree_->Branch("mva"                  ,&mva_               ,"mva_/F");
+  outTree_->Branch("mvaQCD"               ,&mvaQCD_            ,"mvaQCD_/F");
+  outTree_->Branch("mvaTTbar"             ,&mvaTTbar_          ,"mvaTTbar_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
   outTree_->Branch("htBtag"               ,&htBtag_            ,"htBtag_/F");
@@ -108,6 +112,12 @@ void TTHFlatTreeProducer::beginJob()
   outTree_->Branch("sphericity"           ,&sphericity_        ,"sphericity_/F");
   outTree_->Branch("aplanarity"           ,&aplanarity_        ,"aplanarity_/F");
   outTree_->Branch("foxWolfram"           ,&foxWolfram_        ,"foxWolfram_[4]/F");
+  outTree_->Branch("hcMoments"            ,&hcMoments_         ,"hcMoments_[5]/F");
+  outTree_->Branch("centrality"           ,&centrality_        ,"centrality_/F");
+  outTree_->Branch("cosThetaStar1"        ,&cosThetaStar1_     ,"cosThetaStar1_/F");
+  outTree_->Branch("cosThetaStar2"        ,&cosThetaStar2_     ,"cosThetaStar2_/F");
+  outTree_->Branch("EtStar1"              ,&EtStar1_           ,"EtStar1_/F");
+  outTree_->Branch("EtStar2"              ,&EtStar2_           ,"EtStar2_/F");
 
   outTree_->Branch("mbbAve"               ,&mbbAve_            ,"mbbAve_/F");
   outTree_->Branch("mbbMin"               ,&mbbMin_            ,"mbbMin_/F");
@@ -172,15 +182,26 @@ void TTHFlatTreeProducer::beginJob()
   outTree_->Branch("lepEnergy"            ,"vector<float>"     ,&lE_);
   outTree_->Branch("lepIso"               ,"vector<float>"     ,&lIso_);
   //------------------------------------------------------------------
-  discr_ = new DiscriminatorMVA("KKousour/TopAnalysis/data/"+xmlFile_);
-  triggerBit_ = new std::vector<bool>;
-  triggerPre_ = new std::vector<int>;
+  discrQCD_    = new TTHDiscriminatorMVA("KKousour/TopAnalysis/data/"+xmlFileQCD_);
+  discrTTbar_  = new TTHDiscriminatorMVA("KKousour/TopAnalysis/data/"+xmlFileTTbar_);
+  triggerBit_  = new std::vector<bool>;
+  triggerPre_  = new std::vector<int>;
   outTree_->Branch("triggerBit"           ,"vector<bool>"      ,&triggerBit_);
   outTree_->Branch("triggerPre"           ,"vector<int>"       ,&triggerPre_);
   //------------------- MC ---------------------------------
-  outTree_->Branch("decay"         ,&decay_        ,"decay_/I");
-  outTree_->Branch("HToBB"         ,&HToBB_        ,"HToBB_/O");
-  outTree_->Branch("npu"           ,&npu_          ,"npu_/I");
+  if (isMC_) {
+    outTree_->Branch("decay"         ,&decay_        ,"decay_/I");
+    outTree_->Branch("HToBB"         ,&HToBB_        ,"HToBB_/O");
+    outTree_->Branch("npu"           ,&npu_          ,"npu_/I");
+    outTree_->Branch("genEvtWeight"         ,&genEvtWeight_      ,"genEvtWeight_/F");
+    outTree_->Branch("lheOriginalXWGTUP"    ,&lheOriginalXWGTUP_ ,"lheOriginalXWGTUP_/F");
+    if (saveWeights_) {
+      scaleWeights_  = new std::vector<float>;
+      pdfWeights_  = new std::vector<float>;
+      outTree_->Branch("scaleWeights"         ,"vector<float>"     ,&scaleWeights_);
+      outTree_->Branch("pdfWeights"           ,"vector<float>"     ,&pdfWeights_);
+    }
+  }
   cout<<"Begin job finished"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -201,7 +222,8 @@ void TTHFlatTreeProducer::endJob()
   delete muf_;
   delete elf_;
   delete puMva_;
-  delete discr_;
+  delete discrQCD_;
+  delete discrTTbar_;
   delete triggerBit_;
   delete triggerPre_;
   delete lId_;
@@ -210,6 +232,12 @@ void TTHFlatTreeProducer::endJob()
   delete lEta_;
   delete lPhi_;
   delete lE_;
+  if (isMC_) {
+    if (saveWeights_) { 
+      delete scaleWeights_;
+      delete pdfWeights_; 
+    }
+  }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 bool TTHFlatTreeProducer::isGoodJet(const pat::Jet &jet)
@@ -236,7 +264,7 @@ bool TTHFlatTreeProducer::isGoodJet(const pat::Jet &jet)
 bool TTHFlatTreeProducer::isGoodMuon(const pat::Muon &mu,const reco::Vertex &vtx,float rho)
 {
   bool res = true; // by default is good, unless fails a cut bellow
-  if(mu.pt() < 10) res = false;
+  if(mu.pt() < minMuPt_) res = false;
   if(fabs(mu.eta()) > 2.4) res = false;
   if(!mu.isTightMuon(vtx)) res = false;
   // --- isolation --- those not used are commented out
@@ -247,28 +275,20 @@ bool TTHFlatTreeProducer::isGoodMuon(const pat::Muon &mu,const reco::Vertex &vtx
 float TTHFlatTreeProducer::MuonRelIso(const reco::Candidate *cand,float rho)
 {
   pat::Muon mu = *((pat::Muon*)cand);
-  float relIsoWithEA = 0.001;
-  const int nEtaBins = 5;
-  const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-  const float effectiveAreaValues[nEtaBins] = {0.0913, 0.0765, 0.0546, 0.0728, 0.1177};
-  reco::MuonPFIsolation pfIso = mu.pfIsolationR03();
-  // Find eta bin first. If eta>2.5, the last eta bin is used.
-  int etaBin = 0;
-  while(etaBin < nEtaBins-1 && abs(mu.eta()) > etaBinLimits[etaBin+1]) ++etaBin;
-  float area = effectiveAreaValues[etaBin];
-  relIsoWithEA = (float)(pfIso.sumChargedHadronPt+max(float(0.0),pfIso.sumNeutralHadronEt+pfIso.sumPhotonEt-rho*area))/mu.pt();
-  return relIsoWithEA;
+  reco::MuonPFIsolation pfIso = mu.pfIsolationR04();
+  float relIso = (float)(pfIso.sumChargedHadronPt+max(0.0,pfIso.sumNeutralHadronEt+pfIso.sumPhotonEt-0.5*pfIso.sumPUPt))/mu.pt();
+  return relIso;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 bool TTHFlatTreeProducer::isGoodElectron(const pat::Electron &el,const reco::Vertex &vtx,float rho)
 {
   bool res = true; // by default is good, unless fails a cut bellow
   bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
-  if(el.pt() < 10) res = false;
+  if(el.pt() < minElPt_) res = false;
   if(fabs(el.eta()) > 2.4 && res == true) res = false;
   if(isEBEEGap && res==true) res = false;
-  bool isEB = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0;
-  bool isEE = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
+  bool isEB = fabs(el.superCluster()->eta()) < 1.479 ? 1 : 0;
+  bool isEE = fabs(el.superCluster()->eta()) > 1.479 ? 1 : 0;
   if(res) {
     float trackMomentumAtVtx = (float)sqrt(el.trackMomentumAtVtx().mag2());
     float ecalEnergy = (float)el.ecalEnergy();
@@ -281,30 +301,31 @@ bool TTHFlatTreeProducer::isGoodElectron(const pat::Electron &el,const reco::Ver
     float dz = (float)el.gsfTrack()->dz(vtx.position());
     int expectedMissingInnerHits = el.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS);
     bool passConversionVeto = el.passConversionVeto();
-    if(isEB) {
-      if(res && full5x5_sigmaIetaIeta > 0.010557) res = false;
-      if(res && fabs(dEtaIn) > 0.012442) res = false;
-      if(res && fabs(dPhiIn) > 0.072624) res = false;
-      if(res && HoE > 0.121476) res = false;
-      if(res && ooEmooP > 0.221803) res = false;
-      if(res && fabs(d0) > 0.022664) res = false;
-      if(res && fabs(dz) > 0.173670) res = false;
+    if(isEB) {// medium working point
+      if(res && full5x5_sigmaIetaIeta > 0.0101) res = false;
+      if(res && fabs(dEtaIn) > 0.0103) res = false;
+      if(res && fabs(dPhiIn) > 0.0336) res = false;
+      if(res && HoE > 0.0876) res = false;
+      if(res && ooEmooP > 0.0174) res = false;
+      if(res && fabs(d0) > 0.0118) res = false;
+      if(res && fabs(dz) > 0.373) res = false;
       if(res && expectedMissingInnerHits >= 2 ) res = false;
       if(res && passConversionVeto == false ) res = false;
+      if(res && LeptonRelIso((reco::Candidate*)&el,rho) > 0.0766) res = false;
     }
-    if(isEE) {
-      if(res && full5x5_sigmaIetaIeta > 0.032602) res = false;
-      if(res && fabs(dEtaIn) > 0.010654) res = false;
-      if(res && fabs(dPhiIn) > 0.145129) res = false;
-      if(res && HoE > 0.131862) res = false;
-      if(res && ooEmooP > 0.142283) res = false;
-      if(res && fabs(d0) > 0.097358) res = false;
-      if(res && fabs(dz) > 0.198444) res = false;
-      if(res && expectedMissingInnerHits >= 2 ) res = false;
+    if(isEE) {// medium working point
+      if(res && full5x5_sigmaIetaIeta > 0.0283) res = false;
+      if(res && fabs(dEtaIn) > 0.00733) res = false;
+      if(res && fabs(dPhiIn) > 0.114) res = false;
+      if(res && HoE > 0.0678) res = false;
+      if(res && ooEmooP > 0.0898) res = false;
+      if(res && fabs(d0) > 0.0739) res = false;
+      if(res && fabs(dz) > 0.602) res = false;
+      if(res && expectedMissingInnerHits > 1 ) res = false;
       if(res && passConversionVeto == false ) res = false;
+      if(res && LeptonRelIso((reco::Candidate*)&el,rho) > 0.0678) res = false;
     }
   }
-  if(res && LeptonRelIso((reco::Candidate*)&el,rho) > 0.15) res = false;
   return res;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -312,9 +333,9 @@ float TTHFlatTreeProducer::ElectronRelIso(const reco::Candidate *cand,float rho)
 {
   pat::Electron el = *((pat::Electron*)cand); 
   float relIsoWithEA = 0;
-  const int nEtaBins = 5;
-  const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-  const float effectiveAreaValues[nEtaBins] = {0.1013, 0.0988, 0.0572, 0.0842, 0.1530};
+  const int nEtaBins = 7;
+  const float etaBinLimits[nEtaBins+1] = {0.0, 1.0, 1.479, 2.0, 2.2, 2.3, 2.4, 2.5};
+  const float effectiveAreaValues[nEtaBins] = {0.1752, 0.1862, 0.1411, 0.1534, 0.1903, 0.2243, 0.2687};
   reco::GsfElectron::PflowIsolationVariables pfIso = el.pfIsolationVariables();
   float etaSC = el.superCluster()->eta();
   // Find eta bin first. If eta>2.5, the last eta bin is used.
@@ -325,10 +346,25 @@ float TTHFlatTreeProducer::ElectronRelIso(const reco::Candidate *cand,float rho)
   return relIsoWithEA;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
+void TTHFlatTreeProducer::cmVariables(const ROOT::Math::PtEtaPhiEVector &jet,const ROOT::Math::XYZVector &cmRef,float &cosThetaStar,float &etStar)
+{
+  ROOT::Math::PtEtaPhiEVector momJB = ROOT::Math::VectorUtil::boost(jet,cmRef);
+  
+  cosThetaStar = -999;
+  etStar = -999;
+
+  if (momJB.E() > 0.) {
+    cosThetaStar = momJB.Pz()/momJB.E();
+    etStar = jet.Et()*(1.-cosThetaStar*cosThetaStar);
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////
 void TTHFlatTreeProducer::computeEventShapes(vector<const reco::Candidate *> myObj)
 {
   float sumE(0.0),sumP2(0.0),sumPxx(0.0),sumPxy(0.0),sumPxz(0.0),sumPyy(0.0),sumPyz(0.0),sumPzz(0.0);
   vector<TLorentzVector> vP4;
+  float sumPz = 0.;
+  float sumEt = 0.;
   for(auto & obj: myObj) {
     vP4.push_back(TLorentzVector(obj->px(),obj->py(),obj->pz(),obj->energy())); 
     sumE   += obj->energy();
@@ -339,7 +375,24 @@ void TTHFlatTreeProducer::computeEventShapes(vector<const reco::Candidate *> myO
     sumPyy += obj->py() * obj->py();
     sumPyz += obj->py() * obj->pz();
     sumPzz += obj->pz() * obj->pz();
+
+    sumPz += obj->pz();
+    sumEt += obj->pt();
   } 
+  float sumSqr = sumE*sumE-sumPz*sumPz;
+  if (sumSqr > 0.) {
+    centrality_ = sumEt/sqrt(sumSqr);
+  }
+  if (sumE != 0 && myObj.size() > 2) {
+    ROOT::Math::XYZVector cmRef;
+    cmRef.SetZ(-sumPz/sumE);
+
+    ROOT::Math::PtEtaPhiEVector theJet1(myObj.at(0)->pt(),myObj.at(0)->eta(),myObj.at(0)->phi(),myObj.at(0)->energy());
+    ROOT::Math::PtEtaPhiEVector theJet2(myObj.at(1)->pt(),myObj.at(1)->eta(),myObj.at(1)->phi(),myObj.at(1)->energy());
+
+    cmVariables(theJet1,cmRef,cosThetaStar1_,EtStar1_);
+    cmVariables(theJet2,cmRef,cosThetaStar2_,EtStar2_);
+  }
   if (sumP2 > 0) {
     //---- loop over jet pairs and compute Fox-Wolfram moments ----
     float sumPij[4] = {0.0,0.0,0.0,0.0};
@@ -354,6 +407,21 @@ void TTHFlatTreeProducer::computeEventShapes(vector<const reco::Candidate *> myO
     }
     for(int i=0;i<4;i++) {
       foxWolfram_[i] = sumPij[i];
+    }
+    //---- loop over jet pairs and compute Fox-Wolfram moments ----
+    float sumPTij[5] = {0.0,0.0,0.0,0.0,0.0};
+    float zeros[5] = {2.4048,5.5201,8.6537,11.7915,14.9309};
+    for(unsigned int k1=0;k1<vP4.size();k1++) {
+      for(unsigned int k2=k1+1;k2<vP4.size();k2++) {
+        float dR = deltaR(vP4[k1].Rapidity(),vP4[k1].Phi(),vP4[k2].Rapidity(),vP4[k2].Phi());
+        float factor = vP4[k1].Pt()*vP4[k2].Pt()/pow(sumEt,2);
+        for(int i=0;i<5;i++) {
+          sumPTij[i] += factor*TMath::BesselJ0(zeros[i]*dR);
+        } 
+      }
+    }
+    for(int i=0;i<5;i++) {
+      hcMoments_[i] = sumPTij[i];
     }
     //---- compute sphericity -----------------------
     float Txx = sumPxx/sumP2;
@@ -383,33 +451,42 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
 {
   initialize();
 
-  edm::Handle<pat::JetCollection> jets;
-  iEvent.getByLabel(srcJets_,jets);
-
-  edm::Handle<pat::MuonCollection> muons;
-  iEvent.getByLabel(srcMuons_,muons);
-
-  edm::Handle<pat::ElectronCollection> electrons;
-  iEvent.getByLabel(srcElectrons_,electrons);
-
-  edm::Handle<pat::METCollection>  met;
-  iEvent.getByLabel(srcMET_,met);
-
-  edm::Handle<edm::ValueMap<float> > qgtagger;
-  iEvent.getByLabel(srcQGL_,qgtagger);
-
-  edm::Handle<double> rho;
-  iEvent.getByLabel(srcRho_,rho);
-
-  edm::Handle<reco::VertexCollection> recVtxs;
-  iEvent.getByLabel(srcVtx_,recVtxs);  
-
-  //---------- mc -----------------------
-  edm::Handle<std::vector<PileupSummaryInfo> > pupInfo;
-  edm::Handle<GenParticleCollection> genParticles;
+  iEvent.getByToken(jetsToken,jets);
+  iEvent.getByToken(muonsToken,muons);
+  iEvent.getByToken(electronsToken,electrons);
+  iEvent.getByToken(metToken,met);
+  iEvent.getByToken(qgtaggerToken,qgtagger);
+  iEvent.getByToken(rhoToken,rho);
+  iEvent.getByToken(recVtxsToken,recVtxs);  
+  iEvent.getByToken(triggerResultsToken,triggerResults);  
+  iEvent.getByToken(triggerPrescalesToken,triggerPrescales);  
   
   if (!iEvent.isRealData()) { 
-    iEvent.getByLabel(edm::InputTag(srcGenParticles_),genParticles);
+    iEvent.getByToken(genEvtInfoToken,genEvtInfo);
+    iEvent.getByToken(genParticlesToken,genParticles);
+    iEvent.getByToken(pupInfoToken,pupInfo);
+
+    genEvtWeight_ = genEvtInfo->weight();
+
+    if (saveWeights_) {
+      iEvent.getByToken(lheEvtInfoToken,lheEvtInfo);
+      lheOriginalXWGTUP_ = lheEvtInfo->originalXWGTUP();
+      for(unsigned i=0;i<lheEvtInfo->weights().size();i++) {
+        string wtid(lheEvtInfo->weights()[i].id);
+        float wgt(lheEvtInfo->weights()[i].wgt);
+        if (wtid == "1002" || wtid == "2") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1003" || wtid == "3") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1004" || wtid == "4") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1005" || wtid == "5") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1007" || wtid == "7") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1009" || wtid == "9") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_); 
+
+        if ((stoi(wtid) > 2000 && stoi(wtid) <= 2102) || (stoi(wtid) > 10 && stoi(wtid) <= 110)) {
+          pdfWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        }
+      }
+    }
+
     bool WPlusLep(false),WMinusLep(false);
     for(unsigned ip = 0; ip < genParticles->size(); ++ ip) {
       const GenParticle &p = (*genParticles)[ip];
@@ -438,30 +515,22 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
         }
       }
     }// end of particle loop
-    if (WPlusLep && WMinusLep)   decay_ = 0;
+    if (WPlusLep && WMinusLep)   decay_ = 2;
     if (WPlusLep && !WMinusLep)  decay_ = 1;
     if (!WPlusLep && WMinusLep)  decay_ = 1;
-    if (!WPlusLep && !WMinusLep) decay_ = 2;
+    if (!WPlusLep && !WMinusLep) decay_ = 0;
     
-    iEvent.getByLabel(srcPU_,pupInfo);
-    std::vector<PileupSummaryInfo>::const_iterator PUI;
+    edm::View<PileupSummaryInfo>::const_iterator PUI;
     for(PUI = pupInfo->begin(); PUI != pupInfo->end(); ++PUI) {
       if (PUI->getBunchCrossing() == 0) {
         npu_ = PUI->getTrueNumInteractions();
       }
-    }
-    puHisto_->Fill(npu_);   
+    }   
   }
   //-------------- Trigger Info -----------------------------------
   triggerPassHisto_->Fill("totalEvents",1);
-
-  edm::Handle<edm::TriggerResults> triggerResults;
-  iEvent.getByLabel(triggerResults_,triggerResults);  
-
-  edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
-  iEvent.getByLabel(triggerPrescales_,triggerPrescales);
-
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
+  bool passTrigger(false);
   for(unsigned int k=0;k<triggerNames_.size();k++) {
     bool bit(false);
     int pre(1);
@@ -477,6 +546,8 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
         } 
       }
     }
+    //--- if at least one monitored trigger has fired passTrigger becomes true
+    passTrigger += bit;
     triggerBit_->push_back(bit);   
     triggerPre_->push_back(pre);
   }   
@@ -484,6 +555,10 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
   if (cut_vtx) {
+    pvRho_  = (*recVtxs)[0].position().Rho();
+    pvz_    = (*recVtxs)[0].z();
+    pvndof_ = (*recVtxs)[0].ndof();
+    pvchi2_ = (*recVtxs)[0].chi2(); 
     //----- loop over leptons --------------------
     for (const pat::Muon &mu : *muons) {
       if (isGoodMuon(mu,(*recVtxs)[0],*rho)) myLeptons.push_back(&mu);
@@ -512,9 +587,14 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
   vector<float> vqgl;
   vector<int> vBIdx; 
   vector<TLorentzVector> vBP4,vBP4noTop;
+  bool antiBtagFlag(false); 
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {  
     if (isGoodJet(*ijet)) {
       float btag= ijet->bDiscriminator(srcBtag_.c_str());
+      if (btag > btagMaxThreshold_) {
+        antiBtagFlag = true;
+        continue;
+      }
       bool isBtag = (btag >= btagMinThreshold_ && btag < btagMaxThreshold_);
       bool isLeptonMatched = false;
       float DRmax = 0.4;
@@ -607,32 +687,15 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
   if (kinfit_ != "") {
-    edm::Handle<std::vector<double> > vchi2;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Chi2"),vchi2);
-
-    edm::Handle<std::vector<double> > vprob;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Prob"),vprob);
-
-    edm::Handle<std::vector<int> > vstatus;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Status"),vstatus);
-
-    edm::Handle<std::vector<pat::Particle> > partonsB;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsB"),partonsB);
-
-    edm::Handle<std::vector<pat::Particle> > partonsBbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsBBar"),partonsBbar);
-
-    edm::Handle<std::vector<pat::Particle> > partonsQ;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightQ"),partonsQ);
-
-    edm::Handle<std::vector<pat::Particle> > partonsQbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightQBar"),partonsQbar);
-  
-    edm::Handle<std::vector<pat::Particle> > partonsP;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightP"),partonsP);
-
-    edm::Handle<std::vector<pat::Particle> > partonsPbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightPBar"),partonsPbar); 
+    iEvent.getByToken(vchi2Token,vchi2);
+    iEvent.getByToken(vprobToken,vprob);
+    iEvent.getByToken(vstatusToken,vstatus);
+    iEvent.getByToken(partonsBToken,partonsB);
+    iEvent.getByToken(partonsBbarToken,partonsBbar);
+    iEvent.getByToken(partonsQToken,partonsQ);
+    iEvent.getByToken(partonsQbarToken,partonsQbar);
+    iEvent.getByToken(partonsPToken,partonsP);
+    iEvent.getByToken(partonsPbarToken,partonsPbar); 
       
     //---- KinFit information -----------------------------
     status_   = (*vstatus)[0];
@@ -655,16 +718,23 @@ void TTHFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup cons
   }// if kinfit
   
   cutFlowHisto_->Fill("All",1);
-  if (nJets_ >= nJetsMin_) {
-    cutFlowHisto_->Fill("nJets",1);
-    if (nBJets_ >= nBJetsMin_) {
-      cutFlowHisto_->Fill("nBJets",1);
-      if (ht_ > htMin_) {
-        cutFlowHisto_->Fill("ht",1);
-        if (nJets_ > 5 && nBJets_ > 1) {
-          mva_ = discr_->eval(status_,nBJets_,nJets_,ht_,(*pt_)[2],(*pt_)[3],(*pt_)[4],(*pt_)[5],mbbMin_,dRbbMin_,sphericity_,aplanarity_,foxWolfram_[0],foxWolfram_[1],foxWolfram_[2],foxWolfram_[3],mTop_[0],ptTTbar_,mTTbar_,dRbbTop_,chi2_);
+  if (passTrigger || !passTrigger) {
+    cutFlowHisto_->Fill("trigger",1);
+    if (nJets_ >= nJetsMin_) {
+      cutFlowHisto_->Fill("nJets",1);
+      if (nBJets_ >= nBJetsMin_) {
+        cutFlowHisto_->Fill("nBJets",1);
+        if (ht_ > htMin_) {
+          cutFlowHisto_->Fill("ht",1);
+          if (nJets_ > 5 && nBJets_ > 1 && status_>-1) {
+            mvaQCD_ = discrQCD_->eval(nJets_,ht_,(*pt_)[5],mbbMin_,dRbbMin_,qglMedian_,cosThetaStar1_,cosThetaStar2_,sphericity_,aplanarity_,centrality_,foxWolfram_[0],foxWolfram_[1],foxWolfram_[2],foxWolfram_[3],mTop_[0],ptTTbar_,mTTbar_,dRbbTop_,chi2_);
+            mvaTTbar_ = discrTTbar_->eval(nJets_,ht_,(*pt_)[5],mbbMin_,dRbbMin_,qglMedian_,cosThetaStar1_,cosThetaStar2_,sphericity_,aplanarity_,centrality_,foxWolfram_[0],foxWolfram_[1],foxWolfram_[2],foxWolfram_[3],mTop_[0],ptTTbar_,mTTbar_,dRbbTop_,chi2_);
+          }
+          if (!antiBtagFlag) {
+            cutFlowHisto_->Fill("antiBtag",1);
+            outTree_->Fill();     
+          }
         }
-        outTree_->Fill();     
       }
     }  
   }
@@ -685,7 +755,8 @@ void TTHFlatTreeProducer::initialize()
   status_         = -999;
   prob_           = -999;
   chi2_           = -999;
-  mva_            = -999;
+  mvaQCD_         = -999;
+  mvaTTbar_       = -999;
   dRbbTop_        = -999;
   mW_[0]          = -999;
   mW_[1]          = -999;
@@ -702,6 +773,10 @@ void TTHFlatTreeProducer::initialize()
   evt_            = -999;
   lumi_           = -999;
   nVtx_           = -999;
+  pvRho_          = -999;
+  pvz_            = -999;
+  pvndof_         = -999;
+  pvchi2_         = -999;
   nJets_          = -999;
   nLeptons_       = -999;
   nBJets_         = -999;
@@ -713,8 +788,16 @@ void TTHFlatTreeProducer::initialize()
   htBtag_         = -999;
   sphericity_     = -999;
   aplanarity_     = -999;
+  centrality_     = -999;
+  cosThetaStar1_  = -999;
+  cosThetaStar2_  = -999;
+  EtStar1_        = -999;
+  EtStar2_        = -999;
   for(int i=0;i<4;i++) {
     foxWolfram_[i] = -999;
+  }
+  for(int i=0;i<5;i++) {
+    hcMoments_[i] = -999;
   }
   flavor_         ->clear();
   pt_             ->clear();
@@ -740,9 +823,17 @@ void TTHFlatTreeProducer::initialize()
   lPhi_           ->clear();
   lE_             ->clear();
   //----- MC -------
-  HToBB_ = false;
-  decay_ = -999;
-  npu_ = -999;
+  if (isMC_) {
+    HToBB_ = false;
+    decay_ = -1;
+    npu_ = -1;
+    genEvtWeight_ = -999;
+    lheOriginalXWGTUP_ = -999;
+    if (saveWeights_) {
+      scaleWeights_->clear();
+      pdfWeights_->clear(); 
+    }
+  }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 TTHFlatTreeProducer::~TTHFlatTreeProducer() 

@@ -7,23 +7,21 @@ BoostedDiscriminatorMVA::BoostedDiscriminatorMVA(std::string weights)
   weights_ = weights;
   reader_  = new TMVA::Reader("!Color:!Silent");
 
-  reader_->AddVariable("jetMassSoftDrop[0]"   ,&var_[0]);
-  reader_->AddVariable("jetMassSub0[0]"       ,&var_[1]);
-  reader_->AddVariable("jetMassSub1[0]"       ,&var_[2]);
-  reader_->AddVariable("jetTau3[0]/jetTau2[0]",&var_[3]);
-  reader_->AddVariable("jetTau3[0]/jetTau1[0]",&var_[4]);
+  reader_->AddVariable("jetTau3[0]/jetTau2[0]",&var_[0]);
+  reader_->AddVariable("jetTau3[0]/jetTau1[0]",&var_[1]);
+  reader_->AddVariable("jetTau3[1]/jetTau2[1]",&var_[2]);
+  reader_->AddVariable("jetTau3[1]/jetTau1[1]",&var_[3]);
 
   edm::FileInPath f1(weights_);
   reader_->BookMVA("BDT",f1.fullPath());  
 }
 //-------------------------------------------------------------
-float BoostedDiscriminatorMVA::eval(float massSoftDrop,float massSub0,float massSub1,float tau32,float tau31)
+float BoostedDiscriminatorMVA::eval(float tau320,float tau310,float tau321,float tau311)
 {
-  var_[0] = massSoftDrop;
-  var_[1] = massSub0;
-  var_[2] = massSub1;
-  var_[3] = tau32;
-  var_[4] = tau31;
+  var_[0] = tau320;
+  var_[1] = tau310;
+  var_[2] = tau321;
+  var_[3] = tau311;
 
   return reader_->EvaluateMVA("BDT");
 }

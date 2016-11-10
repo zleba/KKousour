@@ -10,70 +10,64 @@
 #include "TMatrixDSymEigen.h"
 
 #include "KKousour/TopAnalysis/plugins/TTbarFlatTreeProducer.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/Common/interface/TriggerNames.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
-#include "DataFormats/Math/interface/deltaPhi.h"
-#include "DataFormats/Math/interface/deltaR.h"
-#include "DataFormats/PatCandidates/interface/Particle.h"
-#include "DataFormats/PatCandidates/interface/MET.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
-#include "DataFormats/JetReco/interface/JetCollection.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
-#include "DataFormats/JetReco/interface/GenJetCollection.h"
-#include "DataFormats/VertexReco/interface/Vertex.h"
-#include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 using namespace std;
 using namespace reco;
 
-TTbarFlatTreeProducer::TTbarFlatTreeProducer(edm::ParameterSet const& cfg) 
-{
-  srcJets_            = cfg.getParameter<edm::InputTag>                      ("jets");
-  srcMuons_           = cfg.getParameter<edm::InputTag>                      ("muons");
-  srcElectrons_       = cfg.getParameter<edm::InputTag>                      ("electrons");
-  srcMET_             = cfg.getParameter<edm::InputTag>                      ("met");
-  srcRho_             = cfg.getParameter<edm::InputTag>                      ("rho"); 
-  srcVtx_             = cfg.getParameter<edm::InputTag>                      ("vertices");
-  srcQGL_             = cfg.getParameter<edm::InputTag>                      ("qgtagger"); 
-  srcBtag_            = cfg.getParameter<std::string>                        ("btagger");
-  kinfit_             = cfg.getParameter<std::string>                        ("kinfit");
-  nJetsMin_           = cfg.getParameter<int>                                ("nJetsMin");
-  nBJetsMin_          = cfg.getParameter<int>                                ("nBJetsMin");
-  etaMax_             = cfg.getParameter<double>                             ("etaMax");
-  ptMin_              = cfg.getParameter<double>                             ("ptMin");
-  htMin_              = cfg.getParameter<double>                             ("htMin");
-  btagMinThreshold_   = cfg.getParameter<double>                             ("btagMinThreshold");
-  btagMaxThreshold_   = cfg.getParameter<double>                             ("btagMaxThreshold");
-  srcPU_              = cfg.getUntrackedParameter<std::string>               ("pu","");
-  srcGenParticles_    = cfg.getUntrackedParameter<edm::InputTag>             ("genparticles",edm::InputTag("")); 
-  triggerNames_       = cfg.getParameter<std::vector<std::string> >          ("triggerNames");
-  triggerResults_     = cfg.getParameter<edm::InputTag>                      ("triggerResults");
-  triggerPrescales_   = cfg.getParameter<edm::InputTag>                      ("triggerPrescales");
+TTbarFlatTreeProducer::TTbarFlatTreeProducer(edm::ParameterSet const& cfg):
+  jetsToken(consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"))),
+  muonsToken(consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"))),
+  electronsToken(consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"))),
+  metToken(consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"))),
+  qgtaggerToken(consumes<edm::ValueMap<float> >(cfg.getParameter<edm::InputTag>("qgtagger"))),
+  rhoToken(consumes<double>(cfg.getParameter<edm::InputTag>("rho"))),
+  recVtxsToken(consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"))),
+  triggerResultsToken(consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults"))),
+  triggerPrescalesToken(consumes<pat::PackedTriggerPrescales>(cfg.getParameter<edm::InputTag>("triggerPrescales"))),
+  pupInfoToken(consumes<edm::View<PileupSummaryInfo> >(edm::InputTag("slimmedAddPileupInfo"))),
+  genEvtInfoToken(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
+  genParticlesToken(consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"))),
+  lheEvtInfoToken(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"))),
+  runInfoToken(consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"))),
+  kinfit_(cfg.getParameter<std::string>("kinfit")),
+  vchi2Token(consumes<edm::View<double> >(edm::InputTag(kinfit_,"Chi2"))),
+  vprobToken(consumes<edm::View<double> >(edm::InputTag(kinfit_,"Prob"))),
+  vstatusToken(consumes<edm::View<int> >(edm::InputTag(kinfit_,"Status"))),
+  partonsBToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsB"))),
+  partonsBbarToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsBBar"))), 
+  partonsQToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightQ"))),
+  partonsQbarToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightQBar"))), 
+  partonsPToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightP"))),
+  partonsPbarToken(consumes<edm::View<pat::Particle> >(edm::InputTag(kinfit_,"PartonsLightPBar"))),  
+  srcBtag_(cfg.getParameter<std::string>("btagger")),
+  triggerNames_(cfg.getParameter<std::vector<std::string> >("triggerNames")),
+  etaMax_(cfg.getParameter<double>("etaMax")),
+  ptMin_(cfg.getParameter<double>("ptMin")),
+  htMin_(cfg.getParameter<double>("htMin")), 
+  probMin_(cfg.getParameter<double>("probMin")),
+  btagMin_(cfg.getParameter<double>("btagMin")),
+  nJetsMin_(cfg.getParameter<int>("nJetsMin")),
+  nBJetsMin_(cfg.getParameter<int>("nBJetsMin")),
+  isMC_(cfg.getUntrackedParameter<bool>("isMC",false)),
+  saveWeights_(cfg.getUntrackedParameter<bool>("saveWeights",false)),
+  debug_(cfg.getUntrackedParameter<bool>("debug",false)) 
+{ 
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void TTbarFlatTreeProducer::beginJob() 
 {
   //--- book the trigger histograms ---------
   triggerNamesHisto_ = fs_->make<TH1F>("TriggerNames","TriggerNames",1,0,1);
-  triggerNamesHisto_->SetBit(TH1::kCanRebin);
+  triggerNamesHisto_->SetCanExtend(TH1::kAllAxes);
   for(unsigned i=0;i<triggerNames_.size();i++) {
     triggerNamesHisto_->Fill(triggerNames_[i].c_str(),1);
   }
   triggerPassHisto_ = fs_->make<TH1F>("TriggerPass","TriggerPass",1,0,1);
-  triggerPassHisto_->SetBit(TH1::kCanRebin);
+  triggerPassHisto_->SetCanExtend(TH1::kAllAxes);
 
   cutFlowHisto_ = fs_->make<TH1F>("CutFlow","CutFlow",1,0,1);
-  cutFlowHisto_->SetBit(TH1::kCanRebin);
-  
-  //--- book the pileup histogram -----------
-  puHisto_ = fs_->make<TH1F>("pileup","pileup",40,0,40);
+  cutFlowHisto_->SetCanExtend(TH1::kAllAxes);
+
   //--- book the tree -----------------------
   outTree_ = fs_->make<TTree>("events","events");
   outTree_->Branch("runNo"                ,&run_               ,"run_/I");
@@ -87,6 +81,10 @@ void TTbarFlatTreeProducer::beginJob()
   outTree_->Branch("prob"                 ,&prob_              ,"prob_/F");
   outTree_->Branch("chi2"                 ,&chi2_              ,"chi2_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
+  outTree_->Branch("pvRho"                ,&pvRho_             ,"pvRho_/F");
+  outTree_->Branch("pvz"                  ,&pvz_               ,"pvz_/F");
+  outTree_->Branch("pvchi2"               ,&pvchi2_            ,"pvchi2_/F");
+  outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
   outTree_->Branch("htBtag"               ,&htBtag_            ,"htBtag_/F");
   outTree_->Branch("met"                  ,&met_               ,"met_/F");
@@ -109,6 +107,8 @@ void TTbarFlatTreeProducer::beginJob()
   outTree_->Branch("mTop"                 ,&mTop_              ,"mTop_[2]/F");
   outTree_->Branch("ptTop"                ,&ptTop_             ,"ptTop_[2]/F");
   outTree_->Branch("yTop"                 ,&yTop_              ,"yTop_[2]/F");
+  outTree_->Branch("etaTop"               ,&etaTop_            ,"etaTop_[2]/F");
+  outTree_->Branch("phiTop"               ,&phiTop_            ,"phiTop_[2]/F");
   outTree_->Branch("mTTbar"               ,&mTTbar_            ,"mTTbar_/F");
   outTree_->Branch("yTTbar"               ,&yTTbar_            ,"yTTbar_/F");
   outTree_->Branch("ptTTbar"              ,&ptTTbar_           ,"ptTTbar_/F");
@@ -165,8 +165,39 @@ void TTbarFlatTreeProducer::beginJob()
   outTree_->Branch("triggerBit"           ,"vector<bool>"      ,&triggerBit_);
   outTree_->Branch("triggerPre"           ,"vector<int>"       ,&triggerPre_);
   //------------------- MC ---------------------------------
-  outTree_->Branch("decay"                ,&decay_             ,"decay_/I");
-  outTree_->Branch("npu"                  ,&npu_               ,"npu_/I");
+  if (isMC_) {
+    outTree_->Branch("decay"                ,&decay_             ,"decay_/I");
+    outTree_->Branch("npu"                  ,&npu_               ,"npu_/I");
+    outTree_->Branch("genEvtWeight"         ,&genEvtWeight_      ,"genEvtWeight_/F");
+    outTree_->Branch("lheOriginalXWGTUP"    ,&lheOriginalXWGTUP_ ,"lheOriginalXWGTUP_/F");
+    if (saveWeights_) {
+      scaleWeights_  = new std::vector<float>;
+      pdfWeights_  = new std::vector<float>;
+      outTree_->Branch("scaleWeights"         ,"vector<float>"     ,&scaleWeights_);
+      outTree_->Branch("pdfWeights"           ,"vector<float>"     ,&pdfWeights_);
+    } 
+    outTree_->Branch("ptTopParton"          ,&ptTopParton_       ,"ptTopParton_[2]/F");
+    outTree_->Branch("yTopParton"           ,&yTopParton_        ,"yTopParton_[2]/F");
+    outTree_->Branch("mTTbarParton"         ,&mTTbarParton_      ,"mTTbarParton_/F");
+    outTree_->Branch("yTTbarParton"         ,&yTTbarParton_      ,"yTTbarParton_/F");
+    outTree_->Branch("ptTTbarParton"        ,&ptTTbarParton_     ,"ptTTbarParton_/F");
+    partonId_       = new std::vector<int>;
+    partonSt_       = new std::vector<int>;
+    partonMatchIdx_ = new std::vector<int>;
+    partonMatchDR_  = new std::vector<float>;
+    partonPt_       = new std::vector<float>;
+    partonEta_      = new std::vector<float>;
+    partonPhi_      = new std::vector<float>;
+    partonE_        = new std::vector<float>;
+    outTree_->Branch("partonId"       ,"vector<int>"   ,&partonId_);
+    outTree_->Branch("partonSt"       ,"vector<int>"   ,&partonSt_);
+    outTree_->Branch("partonMatchIdx" ,"vector<int>"   ,&partonMatchIdx_);
+    outTree_->Branch("partonMatchDR"  ,"vector<float>" ,&partonMatchDR_);
+    outTree_->Branch("partonPt"       ,"vector<float>" ,&partonPt_);
+    outTree_->Branch("partonEta"      ,"vector<float>" ,&partonEta_);
+    outTree_->Branch("partonPhi"      ,"vector<float>" ,&partonPhi_);
+    outTree_->Branch("partonE"        ,"vector<float>" ,&partonE_);
+  }
   cout<<"Begin job finished"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -195,6 +226,38 @@ void TTbarFlatTreeProducer::endJob()
   delete lEta_;
   delete lPhi_;
   delete lE_;
+  if (isMC_) {
+    if (saveWeights_) {
+      delete scaleWeights_;
+      delete pdfWeights_;
+    }
+    delete partonSt_;
+    delete partonId_;
+    delete partonMatchIdx_;
+    delete partonMatchDR_;
+    delete partonPt_;
+    delete partonEta_;
+    delete partonPhi_;
+    delete partonE_; 
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void TTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
+{
+  if (isMC_ && debug_) {
+    iRun.getByToken(runInfoToken,runInfo);
+    for(vector<LHERunInfoProduct::Header>::const_iterator it = runInfo->headers_begin();it != runInfo->headers_end(); it++) {
+      cout<<it->tag()<<endl;
+      vector<string> lines = it->lines();
+      for(unsigned int iLine = 0; iLine < lines.size(); iLine++) {
+        cout<< lines.at(iLine);
+      }
+    }
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void TTbarFlatTreeProducer::endRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
+{
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 bool TTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
@@ -382,77 +445,20 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
 {
   initialize();
 
-  edm::Handle<pat::JetCollection> jets;
-  iEvent.getByLabel(srcJets_,jets);
+  iEvent.getByToken(jetsToken,jets);
+  iEvent.getByToken(muonsToken,muons);
+  iEvent.getByToken(electronsToken,electrons);
+  iEvent.getByToken(metToken,met);
+  iEvent.getByToken(qgtaggerToken,qgtagger);
+  iEvent.getByToken(rhoToken,rho);
+  iEvent.getByToken(recVtxsToken,recVtxs);  
+  iEvent.getByToken(triggerResultsToken,triggerResults);  
+  iEvent.getByToken(triggerPrescalesToken,triggerPrescales);   
 
-  edm::Handle<pat::MuonCollection> muons;
-  iEvent.getByLabel(srcMuons_,muons);
-
-  edm::Handle<pat::ElectronCollection> electrons;
-  iEvent.getByLabel(srcElectrons_,electrons);
-
-  edm::Handle<pat::METCollection>  met;
-  iEvent.getByLabel(srcMET_,met);
-
-  edm::Handle<edm::ValueMap<float> > qgtagger;
-  iEvent.getByLabel(srcQGL_,qgtagger);
-
-  edm::Handle<double> rho;
-  iEvent.getByLabel(srcRho_,rho);
-
-  edm::Handle<reco::VertexCollection> recVtxs;
-  iEvent.getByLabel(srcVtx_,recVtxs);  
-
-  //---------- mc -----------------------
-  edm::Handle<std::vector<PileupSummaryInfo> > pupInfo;
-  edm::Handle<GenParticleCollection> genParticles;
-  
-  if (!iEvent.isRealData()) { 
-    iEvent.getByLabel(edm::InputTag(srcGenParticles_),genParticles);
-    bool WPlusLep(false),WMinusLep(false);
-    for(unsigned ip = 0; ip < genParticles->size(); ++ ip) {
-      const GenParticle &p = (*genParticles)[ip];
-      if (p.pdgId() == 24) {
-        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
-          int daughterID = p.daughter(k)->pdgId();
-          if (daughterID == -11 || daughterID == -13 || daughterID == -15) {
-            WPlusLep = true;
-          }
-        }
-      }
-      if (p.pdgId() == -24) {
-        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
-          int daughterID = p.daughter(k)->pdgId();
-          if (daughterID == 11 || daughterID == 13 || daughterID == 15) {
-            WMinusLep = true;
-          }
-        }
-      }
-    }// end of particle loop
-    if (WPlusLep && WMinusLep)   decay_ = 0;
-    if (WPlusLep && !WMinusLep)  decay_ = 1;
-    if (!WPlusLep && WMinusLep)  decay_ = 1;
-    if (!WPlusLep && !WMinusLep) decay_ = 2;
-    
-    iEvent.getByLabel(srcPU_,pupInfo);
-    std::vector<PileupSummaryInfo>::const_iterator PUI;
-    for(PUI = pupInfo->begin(); PUI != pupInfo->end(); ++PUI) {
-      if (PUI->getBunchCrossing() == 0) {
-        npu_ = PUI->getTrueNumInteractions();
-      }
-    }
-    puHisto_->Fill(npu_);   
-  }
   //-------------- Trigger Info -----------------------------------
-  triggerPassHisto_->Fill("totalEvents",1);
-
-  edm::Handle<edm::TriggerResults> triggerResults;
-  iEvent.getByLabel(triggerResults_,triggerResults);  
-
-  edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
-  iEvent.getByLabel(triggerPrescales_,triggerPrescales); 
-
+  triggerPassHisto_->Fill("totalEvents",1); 
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
+  bool passTrigger(false);
   for(unsigned int k=0;k<triggerNames_.size();k++) {
     bool bit(false);
     int pre(1);
@@ -468,6 +474,8 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
         } 
       }
     }
+    //--- if at least one monitored trigger has fired passTrigger becomes true
+    passTrigger += bit;
     triggerBit_->push_back(bit); 
     triggerPre_->push_back(pre);   
   }   
@@ -475,6 +483,10 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
   if (cut_vtx) {
+    pvRho_  = (*recVtxs)[0].position().Rho();
+    pvz_    = (*recVtxs)[0].z();
+    pvndof_ = (*recVtxs)[0].ndof();
+    pvchi2_ = (*recVtxs)[0].chi2();
     //----- loop over leptons --------------------
     for (const pat::Muon &mu : *muons) {
       if (isGoodMuon(mu,(*recVtxs)[0],*rho)) myLeptons.push_back(&mu);
@@ -506,7 +518,7 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {  
     if (isGoodJet(*ijet)) {
       float btag= ijet->bDiscriminator(srcBtag_.c_str());
-      bool isBtag = (btag >= btagMinThreshold_ && btag < btagMaxThreshold_);
+      bool isBtag = (btag >= btagMin_);
       bool isLeptonMatched = false;
       float DRmax = 0.4;
       for(auto & lep: myLeptons) if( deltaR(lep->eta(),lep->phi(),ijet->eta(),ijet->phi()) < DRmax ) isLeptonMatched = true;
@@ -563,32 +575,15 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
   lumi_   = iEvent.id().luminosityBlock();
 
   if (kinfit_ != "") {
-    edm::Handle<std::vector<double> > vchi2;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Chi2"),vchi2);
-
-    edm::Handle<std::vector<double> > vprob;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Prob"),vprob);
-
-    edm::Handle<std::vector<int> > vstatus;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"Status"),vstatus);
-
-    edm::Handle<std::vector<pat::Particle> > partonsB;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsB"),partonsB);
-
-    edm::Handle<std::vector<pat::Particle> > partonsBbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsBBar"),partonsBbar);
-
-    edm::Handle<std::vector<pat::Particle> > partonsQ;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightQ"),partonsQ);
-
-    edm::Handle<std::vector<pat::Particle> > partonsQbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightQBar"),partonsQbar);
-  
-    edm::Handle<std::vector<pat::Particle> > partonsP;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightP"),partonsP);
-
-    edm::Handle<std::vector<pat::Particle> > partonsPbar;
-    iEvent.getByLabel(edm::InputTag(kinfit_,"PartonsLightPBar"),partonsPbar); 
+    iEvent.getByToken(vchi2Token,vchi2);
+    iEvent.getByToken(vprobToken,vprob);
+    iEvent.getByToken(vstatusToken,vstatus);
+    iEvent.getByToken(partonsBToken,partonsB);
+    iEvent.getByToken(partonsBbarToken,partonsBbar);
+    iEvent.getByToken(partonsQToken,partonsQ);
+    iEvent.getByToken(partonsQbarToken,partonsQbar);
+    iEvent.getByToken(partonsPToken,partonsP);
+    iEvent.getByToken(partonsPbarToken,partonsPbar); 
 
     //---- KinFit information -----------------------------
     status_   = (*vstatus)[0];  
@@ -619,22 +614,137 @@ void TTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup co
     ptTop_[1]    = ((*partonsP)[0].p4()+(*partonsPbar)[0].p4()+(*partonsBbar)[0].p4()).pt();
     yTop_[0]     = ((*partonsQ)[0].p4()+(*partonsQbar)[0].p4()+(*partonsB)[0].p4()).Rapidity();
     yTop_[1]     = ((*partonsP)[0].p4()+(*partonsPbar)[0].p4()+(*partonsBbar)[0].p4()).Rapidity();
+    etaTop_[0]   = ((*partonsQ)[0].p4()+(*partonsQbar)[0].p4()+(*partonsB)[0].p4()).Eta();
+    etaTop_[1]   = ((*partonsP)[0].p4()+(*partonsPbar)[0].p4()+(*partonsBbar)[0].p4()).Eta();
+    phiTop_[0]   = ((*partonsQ)[0].p4()+(*partonsQbar)[0].p4()+(*partonsB)[0].p4()).Phi();
+    phiTop_[1]   = ((*partonsP)[0].p4()+(*partonsPbar)[0].p4()+(*partonsBbar)[0].p4()).Phi();
     LorentzVector p4TTbar(0,0,0,0);
     p4TTbar      = (*partonsQ)[0].p4()+(*partonsQbar)[0].p4()+(*partonsB)[0].p4()+(*partonsP)[0].p4()+(*partonsPbar)[0].p4()+(*partonsBbar)[0].p4();
     mTTbar_      = p4TTbar.mass();
     yTTbar_      = p4TTbar.Rapidity();
     ptTTbar_     = p4TTbar.pt();
   }// if kinfit
+
+  //---------- mc -----------------------
+  if (!iEvent.isRealData()) { 
+    iEvent.getByToken(genEvtInfoToken,genEvtInfo);
+    iEvent.getByToken(lheEvtInfoToken,lheEvtInfo);
+    iEvent.getByToken(genParticlesToken,genParticles);
+    iEvent.getByToken(pupInfoToken,pupInfo);
+
+    genEvtWeight_ = genEvtInfo->weight();
+    lheOriginalXWGTUP_ = lheEvtInfo->originalXWGTUP();
+  
+    if (saveWeights_) {
+      for(unsigned i=0;i<lheEvtInfo->weights().size();i++) {
+        string wtid(lheEvtInfo->weights()[i].id);
+        float wgt(lheEvtInfo->weights()[i].wgt);
+        if (wtid == "1002" || wtid == "2") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1003" || wtid == "3") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1004" || wtid == "4") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1005" || wtid == "5") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1007" || wtid == "7") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1009" || wtid == "9") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_); 
+
+        if ((stoi(wtid) > 2000 && stoi(wtid) <= 2102) || (stoi(wtid) > 10 && stoi(wtid) <= 110)) {
+          pdfWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        }
+      }  
+    } 
+
+    LorentzVector p4T(0,0,0,0),p4Tbar(0,0,0,0);
+    bool WPlusLep(false),WMinusLep(false);
+    for(unsigned ip = 0; ip < genParticles->size(); ++ ip) {
+      const GenParticle &p = (*genParticles)[ip];
+      if (p.pdgId() == 24) {
+        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
+          int daughterID = p.daughter(k)->pdgId();
+          if (daughterID == -11 || daughterID == -13 || daughterID == -15) {
+            WPlusLep = true;
+          }
+        }
+      }
+      if (p.pdgId() == -24) {
+        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
+          int daughterID = p.daughter(k)->pdgId();
+          if (daughterID == 11 || daughterID == 13 || daughterID == 15) {
+            WMinusLep = true;
+          }
+        }
+      }
+      if (fabs(p.pdgId()) == 6 && p.isLastCopy()) {
+        if (p.pdgId() == 6) {
+          p4T = p.p4();
+        }
+        if (p.pdgId() == -6) {
+          p4Tbar = p.p4();
+        }
+        partonId_ ->push_back(p.pdgId());
+        partonSt_ ->push_back(p.status()); 
+        partonPt_ ->push_back(p.pt());
+        partonEta_->push_back(p.eta());
+        partonPhi_->push_back(p.phi());
+        partonE_  ->push_back(p.energy());
+        //----- match partons with jets ------------
+        float dRmin(1000);  
+        int imatch(0);
+        for(int j=0;j<nJets_;j++) {
+          float dR = deltaR(p.eta(),p.phi(),(*eta_)[j],(*phi_)[j]);
+          if (dR < dRmin) {
+            imatch = j;
+            dRmin = dR;
+          }
+        }   
+        partonMatchIdx_->push_back(imatch);
+        partonMatchDR_->push_back(dRmin);
+      }
+    }// end of particle loop
+
+    if (p4T.pt() > p4Tbar.pt()) {
+      ptTopParton_[0] = p4T.pt();
+      ptTopParton_[1] = p4Tbar.pt();
+      yTopParton_[0]  = p4T.Rapidity();
+      yTopParton_[1]  = p4Tbar.Rapidity();
+    }
+    else {
+      ptTopParton_[1] = p4T.pt();
+      ptTopParton_[0] = p4Tbar.pt();
+      yTopParton_[1]  = p4T.Rapidity();
+      yTopParton_[0]  = p4Tbar.Rapidity(); 
+    } 
+    mTTbarParton_   = (p4T+p4Tbar).mass();
+    yTTbarParton_   = (p4T+p4Tbar).Rapidity();
+    ptTTbarParton_  = (p4T+p4Tbar).pt();
+
+    if (WPlusLep && WMinusLep)   decay_ = 2;
+    if (WPlusLep && !WMinusLep)  decay_ = 1;
+    if (!WPlusLep && WMinusLep)  decay_ = 1;
+    if (!WPlusLep && !WMinusLep) decay_ = 0;
+    
+    edm::View<PileupSummaryInfo>::const_iterator PUI;
+    for(PUI = pupInfo->begin(); PUI != pupInfo->end(); ++PUI) {
+      if (PUI->getBunchCrossing() == 0) {
+        npu_ = PUI->getTrueNumInteractions();
+      }
+    }
+  }//--- end of MC -------
+  //cout<<passTrigger<<" "<<nJets_<<" "<<nBJets_<<" "<<ht_<<" "<<status_<<" "<<prob_<<endl;
   cutFlowHisto_->Fill("All",1);
-  if (nJets_ >= nJetsMin_) {
-    cutFlowHisto_->Fill("nJets",1);
-    if (nBJets_ >= nBJetsMin_) {
-      cutFlowHisto_->Fill("nBJets",1);
-      if (ht_ > htMin_) {
-        cutFlowHisto_->Fill("ht",1);
-        if (status_ > -1) {
-          cutFlowHisto_->Fill("kinFit",1);
-          outTree_->Fill();     
+  if (passTrigger) {
+    cutFlowHisto_->Fill("trigger",1);
+    if (nJets_ >= nJetsMin_) {
+      cutFlowHisto_->Fill("nJets",1);
+      if (nBJets_ >= nBJetsMin_) {
+        cutFlowHisto_->Fill("nBJets",1);
+        if (ht_ > htMin_) {
+          cutFlowHisto_->Fill("ht",1);
+          if (status_ > -1) {
+            cutFlowHisto_->Fill("kinFit",1);
+            if (prob_ > probMin_) {
+              cutFlowHisto_->Fill("probability",1);
+              outTree_->Fill();
+            }     
+          }
         }
       }
     }  
@@ -646,6 +756,10 @@ void TTbarFlatTreeProducer::initialize()
   qglAve_         = -1;
   qglMin_         = -1;
   qglMedian_      = -1;
+  pvRho_          = -999;
+  pvz_            = -999;
+  pvndof_         = -999;
+  pvchi2_         = -999;
   status_         = -999;
   prob_           = -1;
   chi2_           = -1;
@@ -669,6 +783,10 @@ void TTbarFlatTreeProducer::initialize()
   ptTop_[1]       = -1;
   yTop_[0]        = -1;
   yTop_[1]        = -1;
+  etaTop_[0]      = -1;
+  etaTop_[1]      = -1;
+  phiTop_[0]      = -1;
+  phiTop_[1]      = -1;
   mTTbar_         = -1;
   yTTbar_         = -1;
   ptTTbar_        = -1;
@@ -713,8 +831,31 @@ void TTbarFlatTreeProducer::initialize()
   lPhi_           ->clear();
   lE_             ->clear();
   //----- MC -------
-  decay_ = -1;
-  npu_ = -1;
+  if (isMC_) {
+    decay_ = -1;
+    npu_ = -1;
+    genEvtWeight_ = -999;
+    lheOriginalXWGTUP_ = -999;
+    if (saveWeights_) {
+      scaleWeights_->clear();
+      pdfWeights_->clear();
+    }
+    ptTopParton_[0] = -999;
+    ptTopParton_[1] = -999;
+    yTopParton_[0]  = -999;
+    yTopParton_[1]  = -999;
+    mTTbarParton_   = -999;
+    yTTbarParton_   = -999;
+    ptTTbarParton_  = -999;
+    partonSt_->clear();
+    partonId_->clear();
+    partonMatchIdx_->clear();
+    partonMatchDR_->clear();
+    partonPt_->clear();
+    partonEta_->clear();
+    partonPhi_->clear();
+    partonE_->clear(); 
+  }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 TTbarFlatTreeProducer::~TTbarFlatTreeProducer() 

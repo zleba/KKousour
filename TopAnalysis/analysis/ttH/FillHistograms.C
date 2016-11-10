@@ -5,11 +5,11 @@
 #include <TString.h> 
 #include <TCollection.h>
 #include <TKey.h>
-void FillHistograms(TString SAMPLE)
+void FillHistograms(TString SAMPLE, bool isMC)
 {
   cout<<"Processing sample "<<SAMPLE<<endl;
-  //TString PATH("root://eoscms//eos/cms/store/cmst3/user/kkousour/ttH/flat/");
-  TString PATH("/afs/cern.ch/work/k/kkousour/private/CMSSW_7_4_12/src/KKousour/TopAnalysis/prod/ttH/");
+  //TString PATH("../../prod/ttH/");
+  TString PATH("root://eoscms.cern.ch//eos/cms/store/cmst3/user/kkousour/ttH/flat/");
   TFile *inf  = TFile::Open(PATH+"flatTree_"+SAMPLE+".root");
   TFile *outf = TFile::Open(TString::Format("Histo_%s.root",SAMPLE.Data()),"RECREATE");
 
@@ -19,18 +19,24 @@ void FillHistograms(TString SAMPLE)
     TString dirName(key->GetName());
     cout<<"Found directory "<<dirName<<endl;
     
-    TH1F *hPass = (TH1F*)inf->Get(dirName+"/TriggerPass");
     outf->mkdir(dirName);  
     TDirectory *dir = (TDirectory*)outf->Get(dirName); 
     TTree *tr   = (TTree*)inf->Get(dirName+"/events");
-    
-    TreeClass myTree(tr);
-    dir->cd();
-    hPass->Write("TriggerPass");
-    myTree.Loop(dir);
-    cout<<"Loop finished"<<endl;
-    dir->Close();
-    delete tr;
+    if (dirName.Contains("eventCounter")) {
+      dir->cd();
+      TH1F *hGenEventWeight = (TH1F*)inf->Get(dirName+"/GenEventWeight");
+      hGenEventWeight->Write("GenEventWeight");  
+    }
+    else { 
+      TreeClass myTree(tr);
+      dir->cd();
+      myTree.Loop(dir,isMC);
+      cout<<"Loop finished"<<endl;
+      dir->Close();
+      cout<<"directory closed"<<endl;
+      delete tr;
+      cout<<"Tree deleted"<<endl;
+    }
   }
   outf->Close();
   inf->Close();

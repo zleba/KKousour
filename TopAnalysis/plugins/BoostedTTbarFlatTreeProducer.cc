@@ -10,68 +10,55 @@
 #include "TMatrixDSymEigen.h"
 
 #include "KKousour/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/Common/interface/TriggerNames.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
-#include "DataFormats/Math/interface/deltaPhi.h"
-#include "DataFormats/Math/interface/deltaR.h"
-#include "DataFormats/PatCandidates/interface/Particle.h"
-#include "DataFormats/PatCandidates/interface/MET.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
-#include "DataFormats/JetReco/interface/JetCollection.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
-#include "DataFormats/JetReco/interface/GenJetCollection.h"
-#include "DataFormats/VertexReco/interface/Vertex.h"
-#include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 using namespace std;
 using namespace reco;
 
-BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet const& cfg) 
-{
-  srcJets_            = cfg.getParameter<edm::InputTag>                      ("jets");
-  srcMuons_           = cfg.getParameter<edm::InputTag>                      ("muons");
-  srcElectrons_       = cfg.getParameter<edm::InputTag>                      ("electrons");
-  srcMET_             = cfg.getParameter<edm::InputTag>                      ("met");
-  srcRho_             = cfg.getParameter<edm::InputTag>                      ("rho"); 
-  srcVtx_             = cfg.getParameter<edm::InputTag>                      ("vertices");
-  srcBtag_            = cfg.getParameter<std::string>                        ("btagger");
-  xmlFile_            = cfg.getParameter<std::string>                        ("xmlFile");
-  etaMax_             = cfg.getParameter<double>                             ("etaMax");
-  ptMin_              = cfg.getParameter<double>                             ("ptMin");
-  ptMinLeading_       = cfg.getParameter<double>                             ("ptMinLeading");
-  massMin_            = cfg.getParameter<double>                             ("massMin");
-  btagMinThreshold_   = cfg.getParameter<double>                             ("btagMinThreshold");
-  btagMaxThreshold_   = cfg.getParameter<double>                             ("btagMaxThreshold");
-  srcPU_              = cfg.getUntrackedParameter<std::string>               ("pu","");
-  srcGenParticles_    = cfg.getUntrackedParameter<edm::InputTag>             ("genparticles",edm::InputTag("")); 
-  triggerNames_       = cfg.getParameter<std::vector<std::string> >          ("triggerNames");
-  triggerResults_     = cfg.getParameter<edm::InputTag>                      ("triggerResults");
-  triggerPrescales_   = cfg.getParameter<edm::InputTag>                      ("triggerPrescales");
+BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet const& cfg)
+{ 
+  jetsToken             = consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
+  muonsToken            = consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
+  electronsToken        = consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
+  metToken              = consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
+  candsToken            = consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
+  rhoToken              = consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
+  recVtxsToken          = consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
+  triggerResultsToken   = consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults"));
+  triggerPrescalesToken = consumes<pat::PackedTriggerPrescales>(cfg.getParameter<edm::InputTag>("triggerPrescales"));
+  pupInfoToken          = consumes<edm::View<PileupSummaryInfo> >(edm::InputTag("slimmedAddPileupInfo"));
+  genEvtInfoToken       = consumes<GenEventInfoProduct>(edm::InputTag("generator"));
+  genParticlesToken     = consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"));
+  lheEvtInfoToken       = consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"));
+  runInfoToken          = consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"));
+  srcBtag_              = cfg.getParameter<std::string>("btagger");
+  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
+  triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
+  etaMax_               = cfg.getParameter<double>("etaMax");
+  ptMin_                = cfg.getParameter<double>("ptMin");
+  ptMinLeading_         = cfg.getParameter<double>("ptMinLeading");
+  massMin_              = cfg.getParameter<double>("massMin");
+  btagMin_              = cfg.getParameter<double>("btagMin");
+  minMuPt_              = cfg.getParameter<double>("minMuPt");
+  minElPt_              = cfg.getParameter<double>("minElPt");
+  isMC_                 = cfg.getUntrackedParameter<bool>("isMC",false);
+  saveWeights_          = cfg.getUntrackedParameter<bool>("saveWeights",false);
+  debug_                = cfg.getUntrackedParameter<bool>("debug",false);
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginJob() 
 {
   //--- book the trigger histograms ---------
   triggerNamesHisto_ = fs_->make<TH1F>("TriggerNames","TriggerNames",1,0,1);
-  triggerNamesHisto_->SetBit(TH1::kCanRebin);
+  triggerNamesHisto_->SetCanExtend(TH1::kAllAxes);
   for(unsigned i=0;i<triggerNames_.size();i++) {
     triggerNamesHisto_->Fill(triggerNames_[i].c_str(),1);
   }
   triggerPassHisto_ = fs_->make<TH1F>("TriggerPass","TriggerPass",1,0,1);
-  triggerPassHisto_->SetBit(TH1::kCanRebin);
+  triggerPassHisto_->SetCanExtend(TH1::kAllAxes);
 
   cutFlowHisto_ = fs_->make<TH1F>("CutFlow","CutFlow",1,0,1);
-  cutFlowHisto_->SetBit(TH1::kCanRebin);
-  
-  //--- book the pileup histogram -----------
-  puHisto_ = fs_->make<TH1F>("pileup","pileup",40,0,40);
+  cutFlowHisto_->SetCanExtend(TH1::kAllAxes);
+ 
   //--- book the tree -----------------------
   outTree_ = fs_->make<TTree>("events","events");
   outTree_->Branch("runNo"                ,&run_               ,"run_/I");
@@ -81,6 +68,10 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("nJets"                ,&nJets_             ,"nJets_/I");
   outTree_->Branch("nLeptons"             ,&nLeptons_          ,"nLeptons_/I");
   outTree_->Branch("nBJets"               ,&nBJets_            ,"nBJets_/I");
+  outTree_->Branch("pvRho"                ,&pvRho_             ,"pvRho_/F");
+  outTree_->Branch("pvz"                  ,&pvz_               ,"pvz_/F");
+  outTree_->Branch("pvchi2"               ,&pvchi2_            ,"pvchi2_/F");
+  outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
   outTree_->Branch("mva"                  ,&mva_               ,"mva_/F");
@@ -91,6 +82,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("ptJJ"                 ,&ptJJ_              ,"ptJJ_/F");
   outTree_->Branch("dRJJ"                 ,&dRJJ_              ,"dRJJ_/F");
   outTree_->Branch("dPhiJJ"               ,&dPhiJJ_            ,"dPhiJJ_/F");
+  outTree_->Branch("dPhiLJ"               ,&dPhiLJ_            ,"dPhiLJ_/F");
   //------------------------------------------------------------------
   isBtag_         = new std::vector<bool>;
   flavor_         = new std::vector<int>;
@@ -115,6 +107,12 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   btagSub1_       = new std::vector<float>;
   massSub0_       = new std::vector<float>;
   massSub1_       = new std::vector<float>;
+  ptSub0_         = new std::vector<float>;
+  ptSub1_         = new std::vector<float>;
+  etaSub0_        = new std::vector<float>;
+  etaSub1_        = new std::vector<float>;
+  flavorSub0_     = new std::vector<int>;
+  flavorSub1_     = new std::vector<int>;
   lId_            = new std::vector<int>;
   lPt_            = new std::vector<float>;
   lEta_           = new std::vector<float>;
@@ -144,6 +142,12 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("jetBtagSub1"          ,"vector<float>"     ,&btagSub1_);
   outTree_->Branch("jetMassSub0"          ,"vector<float>"     ,&massSub0_);
   outTree_->Branch("jetMassSub1"          ,"vector<float>"     ,&massSub1_);
+  outTree_->Branch("jetPtSub0"            ,"vector<float>"     ,&ptSub0_);
+  outTree_->Branch("jetPtSub1"            ,"vector<float>"     ,&ptSub1_);
+  outTree_->Branch("jetEtaSub0"           ,"vector<float>"     ,&etaSub0_);
+  outTree_->Branch("jetEtaSub1"           ,"vector<float>"     ,&etaSub1_);
+  outTree_->Branch("jetFlavorSub0"        ,"vector<int>"       ,&flavorSub0_);
+  outTree_->Branch("jetFlavorSub1"        ,"vector<int>"       ,&flavorSub1_);
   outTree_->Branch("lepId"                ,"vector<int>"       ,&lId_);
   outTree_->Branch("lepPt"                ,"vector<float>"     ,&lPt_);
   outTree_->Branch("lepEta"               ,"vector<float>"     ,&lEta_);
@@ -158,8 +162,39 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   //------------------------------------------------------------------
   discr_ = new BoostedDiscriminatorMVA("KKousour/TopAnalysis/data/"+xmlFile_);
   //------------------- MC ---------------------------------
-  outTree_->Branch("decay"                ,&decay_             ,"decay_/I");
-  outTree_->Branch("npu"                  ,&npu_               ,"npu_/I");
+  if (isMC_) {
+    outTree_->Branch("decay"                ,&decay_             ,"decay_/I");
+    outTree_->Branch("npu"                  ,&npu_               ,"npu_/I");
+    outTree_->Branch("genEvtWeight"         ,&genEvtWeight_      ,"genEvtWeight_/F");
+    outTree_->Branch("lheOriginalXWGTUP"    ,&lheOriginalXWGTUP_ ,"lheOriginalXWGTUP_/F");
+    if (saveWeights_) {
+      scaleWeights_  = new std::vector<float>;
+      pdfWeights_  = new std::vector<float>;
+      outTree_->Branch("scaleWeights"         ,"vector<float>"     ,&scaleWeights_);
+      outTree_->Branch("pdfWeights"           ,"vector<float>"     ,&pdfWeights_);
+    }
+    outTree_->Branch("ptTopParton"          ,&ptTopParton_       ,"ptTopParton_[2]/F");
+    outTree_->Branch("yTopParton"           ,&yTopParton_        ,"yTopParton_[2]/F");
+    outTree_->Branch("mTTbarParton"         ,&mTTbarParton_      ,"mTTbarParton_/F");
+    outTree_->Branch("yTTbarParton"         ,&yTTbarParton_      ,"yTTbarParton_/F");
+    outTree_->Branch("ptTTbarParton"        ,&ptTTbarParton_     ,"ptTTbarParton_/F");
+    partonId_       = new std::vector<int>;
+    partonSt_       = new std::vector<int>;
+    partonMatchIdx_ = new std::vector<int>;
+    partonMatchDR_  = new std::vector<float>;
+    partonPt_       = new std::vector<float>;
+    partonEta_      = new std::vector<float>;
+    partonPhi_      = new std::vector<float>;
+    partonE_        = new std::vector<float>;
+    outTree_->Branch("partonId"       ,"vector<int>"   ,&partonId_);
+    outTree_->Branch("partonSt"       ,"vector<int>"   ,&partonSt_);
+    outTree_->Branch("partonMatchIdx" ,"vector<int>"   ,&partonMatchIdx_);
+    outTree_->Branch("partonMatchDR"  ,"vector<float>" ,&partonMatchDR_);
+    outTree_->Branch("partonPt"       ,"vector<float>" ,&partonPt_);
+    outTree_->Branch("partonEta"      ,"vector<float>" ,&partonEta_);
+    outTree_->Branch("partonPhi"      ,"vector<float>" ,&partonPhi_);
+    outTree_->Branch("partonE"        ,"vector<float>" ,&partonE_);
+  }
   cout<<"Begin job finished"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -188,6 +223,12 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete btagSub1_;
   delete massSub0_;
   delete massSub1_;
+  delete ptSub0_;
+  delete ptSub1_;
+  delete etaSub0_;
+  delete etaSub1_;
+  delete flavorSub0_;
+  delete flavorSub1_;
   delete triggerBit_;
   delete triggerPre_;
   delete lId_;
@@ -197,6 +238,38 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete lPhi_;
   delete lE_;
   delete discr_;
+  if (isMC_) {
+    if (saveWeights_) {
+      delete scaleWeights_;
+      delete pdfWeights_;
+    }
+    delete partonSt_;
+    delete partonId_;
+    delete partonMatchIdx_;
+    delete partonMatchDR_;
+    delete partonPt_;
+    delete partonEta_;
+    delete partonPhi_;
+    delete partonE_; 
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
+{
+  if (isMC_ && debug_) {
+    iRun.getByToken(runInfoToken,runInfo);
+    for(vector<LHERunInfoProduct::Header>::const_iterator it = runInfo->headers_begin();it != runInfo->headers_end(); it++) {
+      cout<<it->tag()<<endl;
+      vector<string> lines = it->lines();
+      for(unsigned int iLine = 0; iLine < lines.size(); iLine++) {
+        cout<< lines.at(iLine);
+      }
+    }
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+void BoostedTTbarFlatTreeProducer::endRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
+{
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
@@ -217,45 +290,100 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
   if (!idT) res = false;
   if (pt < ptMin_) res = false;
   if (eta > etaMax_) res = false;
+  if (jet.userFloat("ak8PFJetsCHSSoftDropMass") < massMin_) res = false;
+  if ((jet.subjets("SoftDrop")).size() < 2) res = false;
   return res;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
-bool BoostedTTbarFlatTreeProducer::isGoodMuon(const pat::Muon &mu,const reco::Vertex &vtx,float rho)
+float BoostedTTbarFlatTreeProducer::getPFMiniIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,const reco::Candidate *cand)
+{
+  if (cand->pt() < 5.0) return 99999;
+  float deadcone_ch(0.0),deadcone_nh(0.0),deadcone_ph(0.0),deadcone_pu(0.0);
+  
+  if (cand->isElectron()) {
+    if (fabs(cand->eta()) > 1.479) {
+      deadcone_ch = 0.015;
+      deadcone_nh = 0.0;
+      deadcone_ph = 0.08;
+      deadcone_pu = 0.015;
+    }
+  }
+  if (cand->isMuon()) {
+    deadcone_ch = 0.0001 ;
+    deadcone_nh = 0.01;
+    deadcone_ph = 0.01;
+    deadcone_pu = 0.01;
+  }
+
+  float r_iso(0.2);
+
+  if (cand->pt() > 50 && cand->pt() < 200) {
+    r_iso = 10./cand->pt();
+  }
+  if (cand->pt() >= 200) {
+    r_iso = 0.05;
+  }
+
+  float iso_ch(0.0),iso_nh(0.0),iso_ph(0.0),iso_pu(0.0);
+
+  for(const pat::PackedCandidate &pfc : *pfcands) {
+    if (abs(pfc.pdgId()) < 7) continue;
+    float dr = reco::deltaR(pfc,*cand);
+    if (dr > r_iso) continue;
+    //--- NEUTRALS ----------
+    if (pfc.charge() == 0) {
+      if (pfc.pt() > 0.5) {
+        //--- PHOTONS ------
+        if (abs(pfc.pdgId()) == 22) {
+          if (dr < deadcone_ph) continue;
+          iso_ph += pfc.pt();
+        }
+        //--- HADRONS ------
+        if (abs(pfc.pdgId()) == 130) {
+          if (dr < deadcone_nh) continue;
+          iso_nh += pfc.pt();
+        }  
+      } 
+    }
+    //--- CHARGED FROM PV -----
+    else if (pfc.fromPV() > 1) {
+      if (fabs(pfc.pdgId()) == 211) {
+        if (dr < deadcone_ch) continue;
+        iso_ch += pfc.pt();
+      }
+    }
+    //--- CHARGED FROM PU -----
+    else {
+      if (pfc.pt() > 0.5) {
+        if (dr < deadcone_pu) continue;
+        iso_pu += pfc.pt();
+      }
+    }
+  }
+  float iso = iso_ch + std::max(0.0,iso_ph + iso_nh - 0.5*iso_pu);
+  return iso;
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+bool BoostedTTbarFlatTreeProducer::isGoodMuon(const pat::Muon &mu,edm::Handle<pat::PackedCandidateCollection> pfcands)
 {
   bool res = true; // by default is good, unless fails a cut bellow
-  if(mu.pt() < 10) res = false;
+  if(mu.pt() < minMuPt_) res = false;
   if(fabs(mu.eta()) > 2.4) res = false;
-  if(!mu.isTightMuon(vtx)) res = false;
-  // --- isolation --- those not used are commented out
-  if(res && LeptonRelIso((reco::Candidate*)&mu,rho) > 0.15) res = false;
+  if(!mu.isMediumMuon()) res = false;
+  // --- isolation ---
+  if(res && getPFMiniIsolation(pfcands,(reco::Candidate*)&mu)/mu.pt() > 0.1) res = false;
   return res;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
-float BoostedTTbarFlatTreeProducer::MuonRelIso(const reco::Candidate *cand,float rho)
-{
-  pat::Muon mu = *((pat::Muon*)cand);
-  float relIsoWithEA = 0.001;
-  const int nEtaBins = 5;
-  const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-  const float effectiveAreaValues[nEtaBins] = {0.0913, 0.0765, 0.0546, 0.0728, 0.1177};
-  reco::MuonPFIsolation pfIso = mu.pfIsolationR03();
-  // Find eta bin first. If eta>2.5, the last eta bin is used.
-  int etaBin = 0;
-  while(etaBin < nEtaBins-1 && abs(mu.eta()) > etaBinLimits[etaBin+1]) ++etaBin;
-  float area = effectiveAreaValues[etaBin];
-  relIsoWithEA = (float)(pfIso.sumChargedHadronPt+max(float(0.0),pfIso.sumNeutralHadronEt+pfIso.sumPhotonEt-rho*area))/mu.pt();
-  return relIsoWithEA;
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-bool BoostedTTbarFlatTreeProducer::isGoodElectron(const pat::Electron &el,const reco::Vertex &vtx,float rho)
+bool BoostedTTbarFlatTreeProducer::isGoodElectron(const pat::Electron &el,const reco::Vertex &vtx,edm::Handle<pat::PackedCandidateCollection> pfcands)
 {
   bool res = true; // by default is good, unless fails a cut bellow
   bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
-  if(el.pt() < 10) res = false;
+  if(el.pt() < minElPt_) res = false;
   if(fabs(el.eta()) > 2.4 && res == true) res = false;
   if(isEBEEGap && res==true) res = false;
-  bool isEB = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0;
-  bool isEE = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
+  bool isEB = fabs(el.superCluster()->eta()) < 1.479 ? 1 : 0;
+  bool isEE = fabs(el.superCluster()->eta()) > 1.479 ? 1 : 0;
   if(res) {
     float trackMomentumAtVtx = (float)sqrt(el.trackMomentumAtVtx().mag2());
     float ecalEnergy = (float)el.ecalEnergy();
@@ -268,122 +396,51 @@ bool BoostedTTbarFlatTreeProducer::isGoodElectron(const pat::Electron &el,const 
     float dz = (float)el.gsfTrack()->dz(vtx.position());
     int expectedMissingInnerHits = el.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS);
     bool passConversionVeto = el.passConversionVeto();
-    if(isEB) {
-      if(res && full5x5_sigmaIetaIeta > 0.010557) res = false;
-      if(res && fabs(dEtaIn) > 0.012442) res = false;
-      if(res && fabs(dPhiIn) > 0.072624) res = false;
-      if(res && HoE > 0.121476) res = false;
-      if(res && ooEmooP > 0.221803) res = false;
-      if(res && fabs(d0) > 0.022664) res = false;
-      if(res && fabs(dz) > 0.173670) res = false;
+    if(isEB) {// tight working point
+      if(res && full5x5_sigmaIetaIeta > 0.0101) res = false;
+      if(res && fabs(dEtaIn) > 0.00926) res = false;
+      if(res && fabs(dPhiIn) > 0.0336) res = false;
+      if(res && HoE > 0.0597) res = false;
+      if(res && ooEmooP > 0.012) res = false;
+      if(res && fabs(d0) > 0.0111) res = false;
+      if(res && fabs(dz) > 0.0466) res = false;
       if(res && expectedMissingInnerHits >= 2 ) res = false;
       if(res && passConversionVeto == false ) res = false;
     }
-    if(isEE) {
-      if(res && full5x5_sigmaIetaIeta > 0.032602) res = false;
-      if(res && fabs(dEtaIn) > 0.010654) res = false;
-      if(res && fabs(dPhiIn) > 0.145129) res = false;
-      if(res && HoE > 0.131862) res = false;
-      if(res && ooEmooP > 0.142283) res = false;
-      if(res && fabs(d0) > 0.097358) res = false;
-      if(res && fabs(dz) > 0.198444) res = false;
-      if(res && expectedMissingInnerHits >= 2 ) res = false;
+    if(isEE) {// tight working point
+      if(res && full5x5_sigmaIetaIeta > 0.0279) res = false;
+      if(res && fabs(dEtaIn) > 0.00724) res = false;
+      if(res && fabs(dPhiIn) > 0.0918) res = false;
+      if(res && HoE > 0.0615) res = false;
+      if(res && ooEmooP > 0.00999) res = false;
+      if(res && fabs(d0) > 0.0351) res = false;
+      if(res && fabs(dz) > 0.417) res = false;
+      if(res && expectedMissingInnerHits > 1 ) res = false;
       if(res && passConversionVeto == false ) res = false;
     }
   }
-  if(res && LeptonRelIso((reco::Candidate*)&el,rho) > 0.15) res = false;
+  if(res && getPFMiniIsolation(pfcands,(reco::Candidate*)&el)/el.pt() > 0.1) res = false;
   return res;
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-float BoostedTTbarFlatTreeProducer::ElectronRelIso(const reco::Candidate *cand,float rho)
-{
-  pat::Electron el = *((pat::Electron*)cand); 
-  float relIsoWithEA = 0;
-  const int nEtaBins = 5;
-  const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-  const float effectiveAreaValues[nEtaBins] = {0.1013, 0.0988, 0.0572, 0.0842, 0.1530};
-  reco::GsfElectron::PflowIsolationVariables pfIso = el.pfIsolationVariables();
-  float etaSC = el.superCluster()->eta();
-  // Find eta bin first. If eta>2.5, the last eta bin is used.
-  int etaBin = 0;
-  while(etaBin < nEtaBins-1 && abs(etaSC) > etaBinLimits[etaBin+1]) ++etaBin;
-  float area = effectiveAreaValues[etaBin];
-  relIsoWithEA = (float)(pfIso.sumChargedHadronPt+max(float(0.0),pfIso.sumNeutralHadronEt+pfIso.sumPhotonEt-rho*area))/el.pt();
-  return relIsoWithEA;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup const& iSetup) 
 {
   initialize();
 
-  edm::Handle<pat::JetCollection> jets;
-  iEvent.getByLabel(srcJets_,jets);
+  iEvent.getByToken(jetsToken,jets);
+  iEvent.getByToken(muonsToken,muons);
+  iEvent.getByToken(electronsToken,electrons);
+  iEvent.getByToken(metToken,met);
+  iEvent.getByToken(candsToken,cands);
+  iEvent.getByToken(rhoToken,rho);
+  iEvent.getByToken(recVtxsToken,recVtxs);  
+  iEvent.getByToken(triggerResultsToken,triggerResults);  
+  iEvent.getByToken(triggerPrescalesToken,triggerPrescales); 
 
-  edm::Handle<pat::MuonCollection> muons;
-  iEvent.getByLabel(srcMuons_,muons);
-
-  edm::Handle<pat::ElectronCollection> electrons;
-  iEvent.getByLabel(srcElectrons_,electrons);
-
-  edm::Handle<pat::METCollection>  met;
-  iEvent.getByLabel(srcMET_,met);
-
-  edm::Handle<double> rho;
-  iEvent.getByLabel(srcRho_,rho);
-
-  edm::Handle<reco::VertexCollection> recVtxs;
-  iEvent.getByLabel(srcVtx_,recVtxs);  
-
-  //---------- mc -----------------------
-  edm::Handle<std::vector<PileupSummaryInfo> > pupInfo;
-  edm::Handle<GenParticleCollection> genParticles;
-  
-  if (!iEvent.isRealData()) { 
-    iEvent.getByLabel(edm::InputTag(srcGenParticles_),genParticles);
-    bool WPlusLep(false),WMinusLep(false);
-    for(unsigned ip = 0; ip < genParticles->size(); ++ ip) {
-      const GenParticle &p = (*genParticles)[ip];
-      if (p.pdgId() == 24) {
-        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
-          int daughterID = p.daughter(k)->pdgId();
-          if (daughterID == -11 || daughterID == -13 || daughterID == -15) {
-            WPlusLep = true;
-          }
-        }
-      }
-      if (p.pdgId() == -24) {
-        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
-          int daughterID = p.daughter(k)->pdgId();
-          if (daughterID == 11 || daughterID == 13 || daughterID == 15) {
-            WMinusLep = true;
-          }
-        }
-      }
-    }// end of particle loop
-    if (WPlusLep && WMinusLep)   decay_ = 0;
-    if (WPlusLep && !WMinusLep)  decay_ = 1;
-    if (!WPlusLep && WMinusLep)  decay_ = 1;
-    if (!WPlusLep && !WMinusLep) decay_ = 2;
-    
-    iEvent.getByLabel(srcPU_,pupInfo);
-    std::vector<PileupSummaryInfo>::const_iterator PUI;
-    for(PUI = pupInfo->begin(); PUI != pupInfo->end(); ++PUI) {
-      if (PUI->getBunchCrossing() == 0) {
-        npu_ = PUI->getTrueNumInteractions();
-      }
-    }
-    puHisto_->Fill(npu_);   
-  }
   //-------------- Trigger Info -----------------------------------
   triggerPassHisto_->Fill("totalEvents",1);
-
-  edm::Handle<edm::TriggerResults> triggerResults;
-  iEvent.getByLabel(triggerResults_,triggerResults);  
-
-  edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
-  iEvent.getByLabel(triggerPrescales_,triggerPrescales); 
-
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
+  bool passTrigger(false);
   for(unsigned int k=0;k<triggerNames_.size();k++) {
     bool bit(false);
     int pre(1);
@@ -399,6 +456,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
         } 
       }
     }
+    //--- if at least one monitored trigger has fired passTrigger becomes true
+    passTrigger += bit;
     triggerBit_->push_back(bit); 
     triggerPre_->push_back(pre);   
   }   
@@ -406,12 +465,16 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
   if (cut_vtx) {
+    pvRho_    = (*recVtxs)[0].position().Rho();
+    pvz_    = (*recVtxs)[0].z();
+    pvndof_ = (*recVtxs)[0].ndof();
+    pvchi2_ = (*recVtxs)[0].chi2();
     //----- loop over leptons --------------------
     for (const pat::Muon &mu : *muons) {
-      if (isGoodMuon(mu,(*recVtxs)[0],*rho)) myLeptons.push_back(&mu);
+      if (isGoodMuon(mu,cands)) myLeptons.push_back(&mu);
     }
     for (const pat::Electron &el : *electrons) {
-      if (isGoodElectron(el,(*recVtxs)[0],*rho)) myLeptons.push_back(&el);
+      if (isGoodElectron(el,(*recVtxs)[0],cands)) myLeptons.push_back(&el);
     }
     std::sort(myLeptons.begin(),myLeptons.end(),[](const reco::Candidate *a,const reco::Candidate *b){return a->pt() > b->pt();});
     nLeptons_ = (int)myLeptons.size();
@@ -421,7 +484,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       lPhi_->push_back(myLeptons[ii]->phi());
       lE_->push_back(myLeptons[ii]->energy());
       lId_->push_back(myLeptons[ii]->pdgId());
-      lIso_->push_back(LeptonRelIso(myLeptons[ii],*rho));
+      lIso_->push_back(getPFMiniIsolation(cands,myLeptons[ii])/myLeptons[ii]->pt());
     }
   }// if vtx
   //----- PF jets ------------------------------
@@ -429,10 +492,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   nBJets_ = 0;
   ht_     = 0.0;
   vector<LorentzVector> vP4; 
-  for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {   
+  for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {  
     if (isGoodJet(*ijet)) {
       float btag= ijet->bDiscriminator(srcBtag_.c_str());
-      bool isBtag = (btag >= btagMinThreshold_ && btag < btagMaxThreshold_);
+      bool isBtag = (btag >= btagMin_);
       bool isLeptonMatched = false;
       float DRmax = 0.4;
       for(auto & lep: myLeptons) if( deltaR(lep->eta(),lep->phi(),ijet->eta(),ijet->phi()) < DRmax ) isLeptonMatched = true;
@@ -466,13 +529,19 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
         if (nSub > 0) {
           btagSub0_->push_back((ijet->subjets("SoftDrop"))[0]->bDiscriminator(srcBtag_.c_str()));
           massSub0_->push_back((ijet->subjets("SoftDrop"))[0]->mass());
-          if ((ijet->subjets("SoftDrop"))[0]->bDiscriminator(srcBtag_.c_str()) >= btagMinThreshold_) {
+          ptSub0_->push_back((ijet->subjets("SoftDrop"))[0]->pt());
+          etaSub0_->push_back((ijet->subjets("SoftDrop"))[0]->eta());
+          flavorSub0_->push_back((ijet->subjets("SoftDrop"))[0]->partonFlavour());
+          if ((ijet->subjets("SoftDrop"))[0]->bDiscriminator(srcBtag_.c_str()) >= btagMin_) {
             nBSub++;
           }
           if (nSub > 1) {
             btagSub1_->push_back((ijet->subjets("SoftDrop"))[1]->bDiscriminator(srcBtag_.c_str()));
             massSub1_->push_back((ijet->subjets("SoftDrop"))[1]->mass());
-            if ((ijet->subjets("SoftDrop"))[1]->bDiscriminator(srcBtag_.c_str()) >= btagMinThreshold_) {
+            ptSub1_->push_back((ijet->subjets("SoftDrop"))[1]->pt());
+            etaSub1_->push_back((ijet->subjets("SoftDrop"))[1]->eta());
+            flavorSub1_->push_back((ijet->subjets("SoftDrop"))[1]->partonFlavour());
+            if ((ijet->subjets("SoftDrop"))[1]->bDiscriminator(srcBtag_.c_str()) >= btagMin_) {
               nBSub++;
             }
           } 
@@ -491,27 +560,132 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   run_    = iEvent.id().run();
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
+  if (nLeptons_ > 0 && nJets_ > 0) {
+    dPhiLJ_ = fabs(deltaPhi((*lPhi_)[0],(*phi_)[0])); 
+  }
 
-  cutFlowHisto_->Fill("All",1);
   if (nJets_ > 1) {
-    cutFlowHisto_->Fill("nJets",1);
-    if ((*pt_)[0] > ptMinLeading_) {
-      cutFlowHisto_->Fill("ptMinLeading",1);
-      dPhiJJ_ = fabs(deltaPhi(vP4[0].phi(),vP4[1].phi())); 
-      dRJJ_   = deltaR(vP4[0],vP4[1]);
-      mJJ_    = (vP4[0]+vP4[1]).mass();
-      yJJ_    = (vP4[0]+vP4[1]).Rapidity();
-      ptJJ_   = (vP4[0]+vP4[1]).pt();
-      if (nBJets_ > -1) {
-        cutFlowHisto_->Fill("nBJets",1); 
-        if ((*massSoftDrop_)[0] > massMin_) {
-          cutFlowHisto_->Fill("massSoftDrop0",1);
-          if ((*nSubJets_)[0] > 1) {
-            cutFlowHisto_->Fill("nSubJets0",1);
-            mva_ = discr_->eval((*massSoftDrop_)[0],(*massSub0_)[0],(*massSub1_)[0],(*tau3_)[0]/(*tau2_)[0],(*tau3_)[0]/(*tau1_)[0]);
-            outTree_->Fill();  
+    dPhiJJ_ = fabs(deltaPhi(vP4[0].phi(),vP4[1].phi())); 
+    dRJJ_   = deltaR(vP4[0],vP4[1]);
+    mJJ_    = (vP4[0]+vP4[1]).mass();
+    yJJ_    = (vP4[0]+vP4[1]).Rapidity();
+    ptJJ_   = (vP4[0]+vP4[1]).pt();
+    mva_ = discr_->eval((*tau3_)[0]/(*tau2_)[0],(*tau3_)[0]/(*tau1_)[0],(*tau3_)[1]/(*tau2_)[1],(*tau3_)[1]/(*tau1_)[1]);
+  }
+
+  //---------- mc -----------------------
+
+  if (!iEvent.isRealData()) { 
+    iEvent.getByToken(genEvtInfoToken,genEvtInfo);
+    iEvent.getByToken(lheEvtInfoToken,lheEvtInfo);
+    iEvent.getByToken(genParticlesToken,genParticles);
+    iEvent.getByToken(pupInfoToken,pupInfo);
+
+    genEvtWeight_ = genEvtInfo->weight();
+    lheOriginalXWGTUP_ = lheEvtInfo->originalXWGTUP();
+
+    if (saveWeights_) {
+      for(unsigned i=0;i<lheEvtInfo->weights().size();i++) {
+        string wtid(lheEvtInfo->weights()[i].id);
+        float wgt(lheEvtInfo->weights()[i].wgt);
+        if (wtid == "1002" || wtid == "2") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1003" || wtid == "3") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1004" || wtid == "4") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1005" || wtid == "5") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1007" || wtid == "7") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        if (wtid == "1009" || wtid == "9") scaleWeights_->push_back(wgt/lheOriginalXWGTUP_); 
+
+        if ((stoi(wtid) > 2000 && stoi(wtid) <= 2102) || (stoi(wtid) > 10 && stoi(wtid) <= 110)) {
+          pdfWeights_->push_back(wgt/lheOriginalXWGTUP_);
+        }
+      }
+    } 
+ 
+    LorentzVector p4T(0,0,0,0),p4Tbar(0,0,0,0);
+    bool WPlusLep(false),WMinusLep(false);
+    for(unsigned ip = 0; ip < genParticles->size(); ++ ip) {
+      const GenParticle &p = (*genParticles)[ip];
+      if (p.pdgId() == 24) {
+        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
+          int daughterID = p.daughter(k)->pdgId();
+          if (daughterID == -11 || daughterID == -13 || daughterID == -15) {
+            WPlusLep = true;
           }
         }
+      }
+      if (p.pdgId() == -24) {
+        for(unsigned k = 0; k < p.numberOfDaughters(); k++) {
+          int daughterID = p.daughter(k)->pdgId();
+          if (daughterID == 11 || daughterID == 13 || daughterID == 15) {
+            WMinusLep = true;
+          }
+        }
+      }
+      if (fabs(p.pdgId()) == 6 && p.isLastCopy()) {
+        if (p.pdgId() == 6) {
+          p4T = p.p4();
+        }
+        if (p.pdgId() == -6) {
+          p4Tbar = p.p4();
+        }
+        partonId_ ->push_back(p.pdgId());
+        partonSt_ ->push_back(p.status()); 
+        partonPt_ ->push_back(p.pt());
+        partonEta_->push_back(p.eta());
+        partonPhi_->push_back(p.phi());
+        partonE_  ->push_back(p.energy());
+        //----- match partons with jets ------------
+        float dRmin(1000);  
+        int imatch(0);
+        for(int j=0;j<nJets_;j++) {
+          float dR = deltaR(p.eta(),p.phi(),(*eta_)[j],(*phi_)[j]);
+          if (dR < dRmin) {
+            imatch = j;
+            dRmin = dR;
+          }
+        }   
+        partonMatchIdx_->push_back(imatch);
+        partonMatchDR_->push_back(dRmin);
+      }
+    }// end of particle loop
+
+    if (p4T.pt() > p4Tbar.pt()) {
+      ptTopParton_[0] = p4T.pt();
+      ptTopParton_[1] = p4Tbar.pt();
+      yTopParton_[0]  = p4T.Rapidity();
+      yTopParton_[1]  = p4Tbar.Rapidity();
+    }
+    else {
+      ptTopParton_[1] = p4T.pt();
+      ptTopParton_[0] = p4Tbar.pt();
+      yTopParton_[1]  = p4T.Rapidity();
+      yTopParton_[0]  = p4Tbar.Rapidity(); 
+    } 
+    mTTbarParton_   = (p4T+p4Tbar).mass();
+    yTTbarParton_   = (p4T+p4Tbar).Rapidity();
+    ptTTbarParton_  = (p4T+p4Tbar).pt();
+
+    if (WPlusLep && WMinusLep)   decay_ = 2;
+    if (WPlusLep && !WMinusLep)  decay_ = 1;
+    if (!WPlusLep && WMinusLep)  decay_ = 1;
+    if (!WPlusLep && !WMinusLep) decay_ = 0;
+    
+    edm::View<PileupSummaryInfo>::const_iterator PUI;
+    for(PUI = pupInfo->begin(); PUI != pupInfo->end(); ++PUI) {
+      if (PUI->getBunchCrossing() == 0) {
+        npu_ = PUI->getTrueNumInteractions();
+      }
+    }
+  }//--- end of MC -------
+
+  cutFlowHisto_->Fill("All",1);
+  if (passTrigger || !passTrigger) {
+    cutFlowHisto_->Fill("trigger",1);
+    if (nJets_ > 1) {
+      cutFlowHisto_->Fill("nJets",1);
+      if ((*pt_)[0] > ptMinLeading_) {
+        cutFlowHisto_->Fill("ptMinLeading",1);
+        outTree_->Fill();  
       }
     }
   }
@@ -519,6 +693,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::initialize()
 {
+  dPhiLJ_         = -1;
   dPhiJJ_         = -1;
   dRJJ_           = -1;
   mJJ_            = -1;
@@ -536,6 +711,10 @@ void BoostedTTbarFlatTreeProducer::initialize()
   metSig_         = -1;
   ht_             = -1;
   mva_            = -999;
+  pvRho_          = -999;
+  pvz_            = -999;
+  pvndof_         = -999;
+  pvchi2_         = -999;
   flavor_         ->clear();
   nSubJets_       ->clear();
   nBSubJets_      ->clear();
@@ -557,6 +736,12 @@ void BoostedTTbarFlatTreeProducer::initialize()
   btagSub1_       ->clear();
   massSub0_       ->clear();
   massSub1_       ->clear();
+  ptSub0_         ->clear();
+  ptSub1_         ->clear();
+  etaSub0_        ->clear();
+  etaSub1_        ->clear(); 
+  flavorSub0_     ->clear();
+  flavorSub1_     ->clear();
   btag_           ->clear();
   isBtag_         ->clear();
   triggerBit_     ->clear();
@@ -568,8 +753,31 @@ void BoostedTTbarFlatTreeProducer::initialize()
   lPhi_           ->clear();
   lE_             ->clear();
   //----- MC -------
-  decay_ = -1;
-  npu_ = -1;
+  if (isMC_) {
+    decay_ = -1;
+    npu_ = -1;
+    genEvtWeight_ = -999;
+    lheOriginalXWGTUP_ = -999;
+    if (saveWeights_) {
+      scaleWeights_->clear();
+      pdfWeights_->clear();
+    }
+    ptTopParton_[0] = -999;
+    ptTopParton_[1] = -999;
+    yTopParton_[0]  = -999;
+    yTopParton_[1]  = -999;
+    mTTbarParton_   = -999;
+    yTTbarParton_   = -999;
+    ptTTbarParton_  = -999;
+    partonSt_->clear();
+    partonId_->clear();
+    partonMatchIdx_->clear();
+    partonMatchDR_->clear();
+    partonPt_->clear();
+    partonEta_->clear();
+    partonPhi_->clear();
+    partonE_->clear(); 
+  }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 BoostedTTbarFlatTreeProducer::~BoostedTTbarFlatTreeProducer() 

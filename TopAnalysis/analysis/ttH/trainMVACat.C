@@ -56,15 +56,16 @@ void trainMVACat()
   const int NVAR = 19;
   TString VAR[NVAR] = {
     "nJets",
-    //"nBJets",
+    "nBJets",
     "ht",
     //"jetPt[0]","jetPt[1]",
     "jetPt[2]","jetPt[3]","jetPt[4]","jetPt[5]",
     "mbbMin","dRbbMin",
     //"dRbbAve","mbbAve",
     //"btagAve","btagMax","btagMin",
-    //"qglAve","qglMin","qglMedian",
+    "qglAve","qglMin","qglMedian",
     "sphericity","aplanarity","foxWolfram[0]","foxWolfram[1]","foxWolfram[2]","foxWolfram[3]",
+    "hcMoments[0]","hcMoments[1]","hcMoments[2]","hcMoments[3]","hcMoments[4]",
     "mTop[0]","ptTTbar","mTTbar","dRbbTop","chi2"
   };
   char TYPE[NVAR] = {

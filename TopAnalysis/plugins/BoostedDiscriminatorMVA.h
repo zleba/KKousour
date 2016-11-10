@@ -8,11 +8,11 @@ class BoostedDiscriminatorMVA
   public:
     BoostedDiscriminatorMVA(std::string weights);
     ~BoostedDiscriminatorMVA();
-    float eval(float massSoftDrop,float massSub0,float massSub1,float tau32,float tau31);
+    float eval(float tau320,float tau310,float tau321,float tau311);
     
   private:
     std::string weights_;
     TMVA::Reader *reader_;
-    float var_[5];
+    float var_[4];
 };
 #endif
