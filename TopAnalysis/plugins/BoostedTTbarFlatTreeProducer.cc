@@ -14,7 +14,7 @@
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 
-#include "UserCode/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
+#include "KKousour/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
 
 using namespace std;
 using namespace reco;
@@ -122,6 +122,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   flavor_         = new std::vector<int>;
   flavorHadron_   = new std::vector<int>;
   nSubJets_       = new std::vector<int>;
+  nSubGenJets_    = new std::vector<int>;
   nBSubJets_      = new std::vector<int>;
   pt_             = new std::vector<float>;
   btag_           = new std::vector<float>;  
@@ -169,6 +170,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("jetFlavor"            ,"vector<int>"       ,&flavor_);
   outTree_->Branch("jetFlavorHadron"      ,"vector<int>"       ,&flavorHadron_);
   outTree_->Branch("jetNSub"              ,"vector<int>"       ,&nSubJets_);
+  outTree_->Branch("jetNSubGen"           ,"vector<int>"       ,&nSubGenJets_);
   outTree_->Branch("jetNBSub"             ,"vector<int>"       ,&nBSubJets_);
   outTree_->Branch("jetPt"                ,"vector<float>"     ,&pt_);
   outTree_->Branch("jetBtag"              ,"vector<float>"     ,&btag_);  
@@ -276,6 +278,28 @@ void BoostedTTbarFlatTreeProducer::beginJob()
     outTree_->Branch("GenSDSimmetry"       ,"vector<float>"   ,&GenSDSimmetry_);   
     outTree_->Branch("isBJetGen"       ,"vector<bool>"   ,&isBJetGen_);   
 
+    GenSubJet1Pt_= new std::vector<float>;
+    GenSubJet2Pt_= new std::vector<float>;
+    GenSubJet1Eta_= new std::vector<float>;
+    GenSubJet2Eta_= new std::vector<float>;
+    GenSubJet1Phi_= new std::vector<float>;
+    GenSubJet2Phi_= new std::vector<float>;
+    GenSubJet1Mass_= new std::vector<float>;
+    GenSubJet2Mass_= new std::vector<float>;
+    GenSubJetsDeltaR_= new std::vector<float>;
+    GenSubJetsMu_= new std::vector<float>;
+
+    outTree_->Branch("GenSubJet1Pt"       ,"vector<float>"   ,&GenSubJet1Pt_);
+    outTree_->Branch("GenSubJet2Pt"       ,"vector<float>"   ,&GenSubJet2Pt_);
+    outTree_->Branch("GenSubJet1Eta"      ,"vector<float>"   ,&GenSubJet1Eta_);
+    outTree_->Branch("GenSubJet2Eta"      ,"vector<float>"   ,&GenSubJet2Eta_);
+    outTree_->Branch("GenSubJet1Phi"      ,"vector<float>"   ,&GenSubJet1Phi_);
+    outTree_->Branch("GenSubJet2Phi"      ,"vector<float>"   ,&GenSubJet2Phi_);
+    outTree_->Branch("GenSubJet1Mass"     ,"vector<float>"   ,&GenSubJet1Mass_);
+    outTree_->Branch("GenSubJet2Mass"     ,"vector<float>"   ,&GenSubJet2Mass_);
+    outTree_->Branch("GenSubJetsDeltaR"   ,"vector<float>"   ,&GenSubJetsDeltaR_);
+    outTree_->Branch("GenSubJetsMu"       ,"vector<float>"   ,&GenSubJetsMu_);
+
   }
   cout<<"Begin job finished"<<endl;
 }
@@ -286,6 +310,7 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete flavor_;
   delete flavorHadron_;
   delete nSubJets_;
+  delete nSubGenJets_;
   delete nBSubJets_;
   delete pt_;
   delete btag_;
@@ -357,6 +382,17 @@ void BoostedTTbarFlatTreeProducer::endJob()
     delete GenJettau3_;
     delete GenSDSimmetry_;
     delete isBJetGen_;
+
+    delete GenSubJet1Pt_;
+    delete GenSubJet2Pt_;
+    delete GenSubJet1Eta_;
+    delete GenSubJet2Eta_;
+    delete GenSubJet1Phi_;
+    delete GenSubJet2Phi_;
+    delete GenSubJet1Mass_;
+    delete GenSubJet2Mass_;
+    delete GenSubJetsDeltaR_;
+    delete GenSubJetsMu_;
 
 
   }
@@ -794,7 +830,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     }// end of particle loop
 
   
-    nGenLeptons_ = (int)myGenLeptons.size();
+    nGenLeptons_ = (int) myGenLeptons.size();
 
     if (p4T.pt() > p4Tbar.pt()) {
       ptTopParton_[0] = p4T.pt();
@@ -825,7 +861,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     }
 
     vector<LorentzVector> vP4Gen;
- 
+
     for(GenJetCollection::const_iterator i_gen = genjets->begin(); i_gen != genjets->end(); i_gen++) {
       if (i_gen->pt() > GenptMin_ && fabs(i_gen->y()) < GenetaMax_ ) {
 
@@ -874,6 +910,40 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 	GenSoftDropTau_->push_back(Tau32);
         GenSoftDropMass_->push_back(iMSoftDrop);
 
+	//subjets for Gen jets
+	vector<PseudoJet> pieces = pT1JetSD.pieces();
+
+	float deltaRgensubjets=pT1JetSD.structure_of<contrib::SoftDrop>().delta_R();
+	float mugensubjets=pT1JetSD.structure_of<contrib::SoftDrop>().mu();
+
+	if(pieces.size()>1){
+
+	  float ptfirstconst = pieces[0].perp();
+	  float ptsecondconst = pieces[1].perp();
+	  
+	  float etafirstconst = pieces[0].eta();
+	  float etasecondconst = pieces[1].eta();
+	  
+	  float phifirstconst = pieces[0].phi();
+	  float phisecondconst = pieces[1].phi();
+	  
+	  float jet_mass_1=pieces[0].m();
+	  float jet_mass_2=pieces[1].m();
+	
+	  GenSubJet1Pt_->push_back(ptfirstconst);
+	  GenSubJet2Pt_->push_back(ptsecondconst);
+	  GenSubJet1Eta_->push_back(etafirstconst);
+	  GenSubJet2Eta_->push_back(etasecondconst);
+	  GenSubJet1Phi_->push_back(phifirstconst);
+	  GenSubJet2Phi_->push_back(phisecondconst);
+	  GenSubJet1Mass_->push_back(jet_mass_1);
+	  GenSubJet2Mass_->push_back(jet_mass_2);
+	}
+
+	GenSubJetsDeltaR_->push_back(deltaRgensubjets);
+	GenSubJetsMu_->push_back(mugensubjets);
+	nSubGenJets_->push_back(pieces.size());
+
         lOutJets.clear();
         delete fClustering;
         lClusterParticles.clear();
@@ -915,7 +985,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     cutFlowHisto_->Fill("trigger",1);
     if (nJets_ > 1) {
       cutFlowHisto_->Fill("nJets",1);
-      if ((*pt_)[0] > ptMinLeading_) {
+      if ((*pt_)[0] > ptMinLeading_ && (*pt_)[1] > ptMinLeading_) {
         cutFlowHisto_->Fill("ptMinLeading",1);
         outTree_->Fill();  
       }
@@ -960,6 +1030,7 @@ void BoostedTTbarFlatTreeProducer::initialize()
   flavor_         ->clear();
   flavorHadron_   ->clear();
   nSubJets_       ->clear();
+  nSubGenJets_    ->clear();
   nBSubJets_      ->clear();
   pt_             ->clear();
   eta_            ->clear();
@@ -1040,6 +1111,17 @@ void BoostedTTbarFlatTreeProducer::initialize()
     GenJettau1_->clear();
     GenJettau2_->clear();
     GenJettau3_->clear();
+
+    GenSubJet1Pt_->clear();
+    GenSubJet2Pt_->clear();
+    GenSubJet1Eta_->clear();
+    GenSubJet2Eta_->clear();
+    GenSubJet1Phi_->clear();
+    GenSubJet2Phi_->clear();
+    GenSubJet1Mass_->clear();
+    GenSubJet2Mass_->clear();
+    GenSubJetsDeltaR_->clear();
+    GenSubJetsMu_->clear();
 
   }
 }
