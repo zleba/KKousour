@@ -439,7 +439,7 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
   //if (!idT) res = false;
   if (pt < ptMin_) res = false;
   if (eta > etaMax_) res = false;
-  cout << "Patrick "<< idT << " "<< pt <<" "<< eta << endl;
+  cout << "Jet Parameters "<< idT << " "<< pt <<" "<< eta << endl;
   //if (jet.userFloat("ak8PFJetsCHSSoftDropMass") < massMin_) res = false;
   //if ((jet.subjets("SoftDrop")).size() < 2) res = false;
   return res;
@@ -654,7 +654,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   
   vector<LorentzVector> vP4; 
   if(jets->size() > 0)
-      cout << "RADEK "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
+      cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {  
     if (isGoodJet(*ijet)) {
         cout << "Good jet " << ijet->pt() << endl;
