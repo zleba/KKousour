@@ -40,6 +40,8 @@
 #include "TTree.h"
 #include "TH1F.h"
 #include "TLorentzVector.h"
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
 
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfo.h"//add
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfoMatching.h"//add
@@ -90,7 +92,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::EDGetTokenT<LHEEventProduct> lheEvtInfoToken;
     edm::EDGetTokenT<LHERunInfoProduct> runInfoToken;
  
-    std::string srcBtag_,xmlFile_,xmlFileGen_;
+    std::string srcBtag_,xmlFile_;
     std::vector<std::string> triggerNames_;
     double etaMax_,ptMin_,ptMinLeading_,massMin_,btagMin_,minMuPt_,minElPt_,GenetaMax_,GenptMin_;
     bool   isMC_,isPrint_,saveWeights_,debug_; 
@@ -102,18 +104,18 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     TH1F *triggerPassHisto_,*triggerNamesHisto_;
     //---- output TREE variables ------
     //---- global event variables -----
-    int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_,nGenLeptons_;
+    int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_;
     float rho_,met_,metSig_,ht_,mva_,pvRho_,pvz_,pvndof_,pvchi2_,mvaGen_,metGenSig_;
     std::vector<bool> *triggerBit_;
     std::vector<int>  *triggerPre_;
     //---- top variables --------------
     float dRJJ_,dPhiJJ_,mJJ_,yJJ_,ptJJ_;
     float dRGenJJ_,dPhiGenJJ_,mGenJJ_,yGenJJ_,ptGenJJ_,metGen_;
-    float dPhiLJ_,dPhiGenLJ_;
+    float dPhiLJ_;
     //---- jet variables --------------
     std::vector<bool>  *isBtag_;
     std::vector<int>   *flavor_,*nSubJets_,*nSubGenJets_,*nBSubJets_,*flavorHadron_;
-    std::vector<float> *pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*tau1_,*tau2_,*tau3_;
+    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*tau1_,*tau2_,*tau3_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
     //---- lepton variables -----------
@@ -136,20 +138,20 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     std::vector<int>   *partonId_,*partonSt_,*partonMatchIdx_;
     std::vector<float> *partonPt_,*partonEta_,*partonPhi_,*partonE_,*partonMatchDR_;
 
+    std::vector<int>   *WBosonId_,*WBosonSt_;
+    std::vector<float> *WBosonPt_,*WBosonEta_,*WBosonPhi_,*WBosonE_;
+
     edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
     //gen jets
-    std::vector<float> *GenSoftDropMass_,*GenSoftDropTau_;
+    std::vector<float> *GenSoftDropMass_,*GenSoftDropTau32_,*GenSoftDropTau31_;
     std::vector<float> *GenJetpt_;
     std::vector<float> *GenJetphi_;
     std::vector<float> *GenJeteta_;
     std::vector<float> *GenJetenergy_;
     std::vector<float> *GenJetmass_;
-    std::vector<float> *GenJettau1_;
-    std::vector<float> *GenJettau2_;
-    std::vector<float> *GenJettau3_;
-    std::vector<float> *GenSDSimmetry_;
     std::vector<bool> *isBJetGen_;
+    std::vector<bool> *isWJetGen_;
 
     edm::Handle<pat::JetCollection> jets;
     edm::Handle<GenJetCollection> genjets;
@@ -166,6 +168,8 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<GenEventInfoProduct> genEvtInfo;
     edm::Handle<LHEEventProduct> lheEvtInfo;
     edm::Handle<LHERunInfoProduct> runInfo;
+
+    JetCorrectionUncertainty *mPFUncCHS;
 
     //fastjet                                                                                                                                                                   
     fastjet::Filter* fTrimmer1;
