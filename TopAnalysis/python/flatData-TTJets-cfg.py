@@ -105,7 +105,7 @@ process.ak4 = process.ak8.clone(
 process.puppi = process.ak8.clone(
     jets            = cms.InputTag('slimmedJetsPuppi'),
     genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
-    triggerNames    = cms.vstring('HLT_PuppiDiPFJet280_200_TrimMass30_BTagCSV_p20_v','HLT_PuppiPFJet450_v'),
+    triggerNames    = cms.vstring('HLT_PuppiPFJet40_v','HLT_PuppiPFJet60_v','HLT_PuppiPFJet80_v','HLT_PuppiPFJet140_v','HLT_PuppiPFJet200_v','HLT_PuppiPFJet260_v','HLT_PuppiPFJet320_v','HLT_PuppiPFJet400_v','HLT_PuppiPFJet450_v','HLT_PuppiPFJet500_v'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
 

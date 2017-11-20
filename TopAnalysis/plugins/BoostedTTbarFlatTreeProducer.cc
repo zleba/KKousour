@@ -235,7 +235,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       //--- erase the last character, i.e. the version number----
       trigger_name.pop_back();
       if (trigger_name == triggerNames_[k]) {
-        bit = triggerResults->accept(itrig); 
+        bit = true;//triggerResults->accept(itrig);
         pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
           triggerPassHisto_->Fill(triggerNames_[k].c_str(),1);
@@ -247,7 +247,6 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     triggerBit_->push_back(bit); 
     triggerPre_->push_back(pre);   
   }   
-  vector<const reco::Candidate *> myLeptons;
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
   if (cut_vtx) {
@@ -255,7 +254,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     pvz_    = (*recVtxs)[0].z();
     pvndof_ = (*recVtxs)[0].ndof();
     pvchi2_ = (*recVtxs)[0].chi2();
-  }// if vtx fadfasdf
+  }// if vtx
   //----- PF jets ------------------------------
   nJets_  = 0;
   nGenJets_  = 0;
