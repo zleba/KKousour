@@ -82,7 +82,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   cutFlowHisto_ = fs_->make<TH1F>("CutFlow","CutFlow",1,0,1);
   cutFlowHisto_->SetCanExtend(TH1::kAllAxes);
  
-  //--- book the tree -----------------------
+  //--- book the tree ----------------------------------
   outTree_ = fs_->make<TTree>("events","events");
   outTree_->Branch("runNo"                ,&run_               ,"run_/I");
   outTree_->Branch("evtNo"                ,&evt_               ,"evt_/I");
