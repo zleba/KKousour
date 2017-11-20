@@ -70,17 +70,17 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     virtual ~BoostedTTbarFlatTreeProducer();
 
   private:  
-    virtual bool isGoodMuon(const pat::Muon &mu,edm::Handle<pat::PackedCandidateCollection> pfcands);
-    virtual bool isGoodElectron(const pat::Electron &el,const reco::Vertex &vtx,edm::Handle<pat::PackedCandidateCollection> pfcands);
+//    virtual bool isGoodMuon(const pat::Muon &mu,edm::Handle<pat::PackedCandidateCollection> pfcands);
+//    virtual bool isGoodElectron(const pat::Electron &el,const reco::Vertex &vtx,edm::Handle<pat::PackedCandidateCollection> pfcands);
     virtual bool isGoodJet(const pat::Jet &jet);
-    float getPFMiniIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,const reco::Candidate *cand);
+//    float getPFMiniIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,const reco::Candidate *cand);
     void initialize();
     //---- configurable parameters --------  
     edm::EDGetTokenT<pat::JetCollection> jetsToken;
     edm::EDGetTokenT<GenJetCollection> genjetsToken;
-    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
-    edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
-    edm::EDGetTokenT<pat::METCollection> metToken;
+    //    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
+    //edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
+    //edm::EDGetTokenT<pat::METCollection> metToken;
     edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
     edm::EDGetTokenT<double> rhoToken;
     edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
@@ -92,7 +92,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::EDGetTokenT<LHEEventProduct> lheEvtInfoToken;
     edm::EDGetTokenT<LHERunInfoProduct> runInfoToken;
  
-    std::string srcBtag_,xmlFile_;
+    //    std::string srcBtag_,xmlFile_;
     std::vector<std::string> triggerNames_;
     double etaMax_,ptMin_,ptMinLeading_,massMin_,btagMin_,minMuPt_,minElPt_,GenetaMax_,GenptMin_;
     bool   isMC_,isPrint_,saveWeights_,debug_; 
@@ -116,6 +116,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     std::vector<bool>  *isBtag_;
     std::vector<int>   *flavor_,*nSubJets_,*nSubGenJets_,*nBSubJets_,*flavorHadron_;
     std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*tau1_,*tau2_,*tau3_;
+    std::vector<int> *chm_, *nhm_, *phm_, *elm_, *mum_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
     //---- lepton variables -----------

@@ -7,10 +7,6 @@ process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2000))
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
-        #"file:10B2302E-DA08-E611-884E-001E67DDD348.root")
-        #"file:004A0552-3929-E611-BD44-0025905A48F0.root"),
-        #"file:002429F8-A586-E611-ACF3-6C3BE5B5C0C0.root"),
-        #"root://cms-xrd-global.cern.ch//store/data/Run2016B/JetHT/MINIAOD/03Feb2017_ver2-v2/110000/003A92CA-6FED-E611-82CD-0025905B8590.root"),
         "file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
 )
 #############   Format MessageLogger #################
@@ -33,7 +29,7 @@ from RecoJets.JetProducers.GenJetParameters_cfi import *
 
 process.ak8GenJetsCustom = ak4GenJets.clone(
     src = genParticleCollection,
-    rParam = cms.double(0.8),
+    rParam = cms.double(0.4),
     jetAlgorithm = cms.string("AntiKt")
 )
 
@@ -48,7 +44,7 @@ process.selectedHadronsAndPartons = selectedHadronsAndPartons.clone(
 from PhysicsTools.JetMCAlgos.AK4PFJetsMCFlavourInfos_cfi import ak4JetFlavourInfos
 process.ak8genJetFlavourInfos = ak4JetFlavourInfos.clone(
     jets = genJetCollection,
-    rParam = cms.double(0.8),
+    rParam = cms.double(0.4),
 )
 
 #only needed if information of the associated b hadrons are required
@@ -62,25 +58,25 @@ process.matchGenBHadron = matchGenBHadron.clone(
 )
 
 ##-------------------- User analyzer  --------------------------------
-process.boosted = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
+process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   jets             = cms.InputTag('slimmedJetsAK8'),
-  muons            = cms.InputTag('slimmedMuons'),
-  electrons        = cms.InputTag('slimmedElectrons'),
-  met              = cms.InputTag('slimmedMETs'),
+#  muons            = cms.InputTag('slimmedMuons'),
+#  electrons        = cms.InputTag('slimmedElectrons'),
+#  met              = cms.InputTag('slimmedMETs'),
   vertices         = cms.InputTag('offlineSlimmedPrimaryVertices'),
   rho              = cms.InputTag('fixedGridRhoFastjetAll'),
   candidates       = cms.InputTag('packedPFCandidates'),
   triggerPrescales = cms.InputTag('patTrigger'),
-  xmlFile          = cms.string('boosted_mva_Fisher.weights.xml'),
-  nJetsMin         = cms.int32(6),
-  nBJetsMin        = cms.int32(2),
-  ptMin            = cms.double(60), 
-  minMuPt          = cms.double(30),                              
-  minElPt          = cms.double(30),                              
+#  xmlFile          = cms.string('boosted_mva_Fisher.weights.xml'),
+  nJetsMin         = cms.int32(0),
+ # nBJetsMin        = cms.int32(0),
+  ptMin            = cms.double(0), 
+  minMuPt          = cms.double(0),                              
+  minElPt          = cms.double(0),                              
   ptMinLeading     = cms.double(60),   
-  massMin          = cms.double(50),
+ # massMin          = cms.double(50),
   htMin            = cms.double(5),
-  etaMax           = cms.double(2.4),
+  etaMax           = cms.double(5),
   kinfit           = cms.string('kinFitTtFullHadEvent'),
   btagMinThreshold = cms.double(0.814),
   btagMin          = cms.double(0.1),                     
@@ -89,7 +85,7 @@ process.boosted = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   qgtagger         = cms.InputTag('QGTagger','qgLikelihood'),
   pu               = cms.untracked.string("addPileupInfo"),
   genparticles     = cms.untracked.InputTag('prunedGenParticles'),  
-  triggerNames     = cms.vstring('HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_v','HLT_AK8PFJet450_v'),
+  triggerNames     = cms.vstring('HLT_AK8PFJet40_v','HLT_AK8PFJet60_v','HLT_AK8PFJet80_v','HLT_AK8PFJet140_v','HLT_AK8PFJet200_v','HLT_AK8PFJet260_v','HLT_AK8PFJet320_v','HLT_AK8PFJet400_v','HLT_AK8PFJet450_v','HLT_AK8PFJet500_v'),
   triggerResults   = cms.InputTag('TriggerResults','','HLT'),
   isMC             = cms.untracked.bool(False),                              
   genjets          = cms.untracked.InputTag('slimmedGenJetsAK8'),
@@ -97,6 +93,20 @@ process.boosted = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   GenetaMax       = cms.untracked.double(2.5),
   jetFlavourInfos = cms.InputTag("ak8genJetFlavourInfos"),                 
   isPrint         = cms.untracked.bool(True),                           
+)
+
+process.ak4 = process.ak8.clone(
+    jets            = cms.InputTag('slimmedJets'),
+    triggerNames    = cms.vstring('HLT_AK4PFJet40_v','HLT_AK4PFJet60_v','HLT_AK4PFJet80_v','HLT_AK4PFJet140_v','HLT_AK4PFJet200_v','HLT_AK4PFJet260_v','HLT_AK4PFJet320_v','HLT_AK4PFJet400_v','HLT_AK4PFJet450_v','HLT_AK4PFJet500_v'),
+    genjets         = cms.untracked.InputTag('slimmedGenJets'),
+    jetFlavourInfos = cms.InputTag("genJetFlavourInfos"), 
+)
+
+process.puppi = process.ak8.clone(
+    jets            = cms.InputTag('slimmedJetsPuppi'),
+    genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
+    triggerNames    = cms.vstring('HLT_PuppiDiPFJet280_200_TrimMass30_BTagCSV_p20_v','HLT_PuppiPFJet450_v'),
+    jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
 
 process.load('TopQuarkAnalysis.TopKinFitter.TtFullHadKinFitProducer_cfi')
@@ -115,12 +125,12 @@ process.kinFitTtFullHadEvent.maxNJets            = 8
 #)
 
 process.kinFitTtFullHadEventNoW = process.kinFitTtFullHadEvent.clone(constraints = cms.vuint32(5))
-process.boostedNoW = process.boosted.clone(kinfit = 'kinFitTtFullHadEventNoW')
+process.ak8NoW = process.ak8.clone(kinfit = 'kinFitTtFullHadEventNoW')
 
 process.p = cms.Path(
    process.goodJets * 
    process.kinFitTtFullHadEvent * 
-   process.boosted 
+   process.ak8*process.ak4 * process.puppi 
 )
 
 
