@@ -86,6 +86,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
     edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken;
     edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescalesToken;
+    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
     edm::EDGetTokenT<edm::View<PileupSummaryInfo> > pupInfoToken;
     edm::EDGetTokenT<GenEventInfoProduct> genEvtInfoToken;
     edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken;
@@ -164,6 +165,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<reco::VertexCollection> recVtxs;
     edm::Handle<edm::TriggerResults> triggerResults;
     edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
+    edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
     edm::Handle<edm::View<PileupSummaryInfo> > pupInfo;
     edm::Handle<edm::View<reco::GenParticle> > genParticles;
     edm::Handle<GenEventInfoProduct> genEvtInfo;

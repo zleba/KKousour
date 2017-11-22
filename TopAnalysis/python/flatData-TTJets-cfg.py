@@ -73,7 +73,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   ptMin            = cms.double(0), 
   minMuPt          = cms.double(0),                              
   minElPt          = cms.double(0),                              
-  ptMinLeading     = cms.double(60),   
+  ptMinLeading     = cms.double(6),   
  # massMin          = cms.double(50),
   htMin            = cms.double(5),
   etaMax           = cms.double(5),
@@ -87,6 +87,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   genparticles     = cms.untracked.InputTag('prunedGenParticles'),  
   triggerNames     = cms.vstring('HLT_AK8PFJet40_v','HLT_AK8PFJet60_v','HLT_AK8PFJet80_v','HLT_AK8PFJet140_v','HLT_AK8PFJet200_v','HLT_AK8PFJet260_v','HLT_AK8PFJet320_v','HLT_AK8PFJet400_v','HLT_AK8PFJet450_v','HLT_AK8PFJet500_v'),
   triggerResults   = cms.InputTag('TriggerResults','','HLT'),
+  triggerObjects  = cms.InputTag("slimmedPatTrigger"),
   isMC             = cms.untracked.bool(False),                              
   genjets          = cms.untracked.InputTag('slimmedGenJetsAK8'),
   GenptMin        = cms.untracked.double(60),
@@ -102,12 +103,15 @@ process.ak4 = process.ak8.clone(
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"), 
 )
 
-process.puppi = process.ak8.clone(
+process.ak4PUPPI = process.ak8.clone(
     jets            = cms.InputTag('slimmedJetsPuppi'),
     genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
     triggerNames    = cms.vstring('HLT_PuppiPFJet40_v','HLT_PuppiPFJet60_v','HLT_PuppiPFJet80_v','HLT_PuppiPFJet140_v','HLT_PuppiPFJet200_v','HLT_PuppiPFJet260_v','HLT_PuppiPFJet320_v','HLT_PuppiPFJet400_v','HLT_PuppiPFJet450_v','HLT_PuppiPFJet500_v'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
+
+
+
 
 process.load('TopQuarkAnalysis.TopKinFitter.TtFullHadKinFitProducer_cfi')
 
@@ -130,7 +134,8 @@ process.ak8NoW = process.ak8.clone(kinfit = 'kinFitTtFullHadEventNoW')
 process.p = cms.Path(
    process.goodJets * 
    process.kinFitTtFullHadEvent * 
-   process.ak8*process.ak4 * process.puppi 
+   process.ak8*process.ak4 * process.ak4PUPPI 
+   #process.ak4PUPPI 
 )
 
 

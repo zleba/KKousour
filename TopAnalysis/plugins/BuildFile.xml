@@ -31,5 +31,5 @@
 <use   name="CondFormats/JetMETObjects"/>
 <use   name="fastjet"/>
 <use   name="lhapdf"/>
-<flags   EDM_PLUGIN="1"/>
+<flags CXXFLAGS="-g -O0 -DDEBUG -Wall" EDM_PLUGIN="1"/>
 </library>

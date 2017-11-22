@@ -15,6 +15,7 @@
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
+#include <cassert>
 
 #include "KKousour/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
 
@@ -42,6 +43,9 @@ BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet con
   //srcBtag_              = cfg.getParameter<std::string>("btagger");
   //  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
   triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
+
+  triggerObjects_  = consumes<pat::TriggerObjectStandAloneCollection>(cfg.getParameter<edm::InputTag> ("triggerObjects"));
+
   etaMax_               = cfg.getParameter<double>("etaMax");
   ptMin_                = cfg.getParameter<double>("ptMin");
   ptMinLeading_         = cfg.getParameter<double>("ptMinLeading");
@@ -100,7 +104,6 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   flavorHadron_   = new std::vector<int>;
   pt_             = new std::vector<float>;
   unc_            = new std::vector<float>;
-  cor_            = new std::vector<float>;
   eta_            = new std::vector<float>;
   phi_            = new std::vector<float>;
   mass_           = new std::vector<float>;
@@ -116,7 +119,6 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   elm_            = new std::vector<int>;
   mum_            = new std::vector<int>;
   outTree_->Branch("jetPt"                ,"vector<float>"     ,&pt_);
-  outTree_->Branch("jetCorr"              ,"vector<float>"     ,&cor_);
   outTree_->Branch("jetUnc"               ,"vector<float>"     ,&unc_);
   outTree_->Branch("jetEta"               ,"vector<float>"     ,&eta_);
   outTree_->Branch("jetPhi"               ,"vector<float>"     ,&phi_);
@@ -145,9 +147,7 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete flavor_;
   delete flavorHadron_;
   delete pt_;
-  delete cor_;
   delete unc_;
-  delete btag_;
   delete eta_;
   delete phi_;
   delete mass_;
@@ -218,13 +218,32 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   iEvent.getByToken(recVtxsToken,recVtxs);  
   iEvent.getByToken(triggerResultsToken,triggerResults);  
   iEvent.getByToken(triggerPrescalesToken,triggerPrescales); 
+  iEvent.getByToken(triggerObjects_, triggerObjects);
 
   triggerBit_->clear();
   triggerPre_->clear();
 
   //-------------- Trigger Info -----------------------------------
-  triggerPassHisto_->Fill("totalEvents",1);
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
+
+  //assert(triggerObjects-);
+  //cout << "TrigArr val " <<  triggerObjects << endl;
+  //cout << "Trig size " << triggerObjects->size() << endl;
+  for (pat::TriggerObjectStandAlone obj : *triggerObjects) { // note: not "const &" since we want to call unpackPathNames
+      cout << "hi Radek" << endl;
+      //obj.unpackPathNames(names);
+
+      //std::vector<std::string> pathNamesAll  = obj.pathNames(false);
+      //std::vector<std::string> pathNamesLast = obj.pathNames(true);
+
+      //cout << "RADEK " << obj.pt() <<" "<< pathNamesAll.size() << " "<< pathNamesLast.size() << endl;
+      //TLorentzVector P4;                                                                                                                                         
+      //P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
+      //LorentzVector qcdhltobj(P4.Px(),P4.Py(),P4.Pz(),P4.E());             
+  }
+
+
+  triggerPassHisto_->Fill("totalEvents",1);
   bool passTrigger(false);
   for(unsigned int k=0;k<triggerNames_.size();k++) {
     bool bit(false);
@@ -235,6 +254,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       //--- erase the last character, i.e. the version number----
       trigger_name.pop_back();
       if (trigger_name == triggerNames_[k]) {
+        cout << "Puppi found " << trigger_name  << endl;
         bit = true;//triggerResults->accept(itrig);
         pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
@@ -262,45 +282,44 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   ht_     = 0.0;
 
   edm::ESHandle<JetCorrectorParametersCollection> PFJetCorParCollCHS;
-  iSetup.get<JetCorrectionsRecord>().get("AK8PFchs",PFJetCorParCollCHS);
+  iSetup.get<JetCorrectionsRecord>().get("AK4PFchs",PFJetCorParCollCHS);
   JetCorrectorParameters const& PFJetCorParCHS = (*PFJetCorParCollCHS)["Uncertainty"];
   mPFUncCHS = new JetCorrectionUncertainty(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
 
   double unc=0.0;
   
-  vector<LorentzVector> vP4; 
   if(jets->size() > 0)
       cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
-  for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {  
-    if (isGoodJet(*ijet)) {
-        cout << "Good jet " << ijet->pt() << endl;
-        flavor_        ->push_back(ijet->partonFlavour());
-	flavorHadron_  ->push_back(ijet->hadronFlavour());
-        chf_           ->push_back(ijet->chargedHadronEnergyFraction());
-        nhf_           ->push_back(ijet->neutralHadronEnergyFraction());
-        phf_           ->push_back(ijet->photonEnergyFraction());
-        elf_           ->push_back(ijet->electronEnergyFraction());
-        muf_           ->push_back(ijet->muonEnergyFraction());
-	chm_           ->push_back(ijet->chargedHadronMultiplicity());
-	nhm_           ->push_back(ijet->neutralHadronMultiplicity());
-	phm_           ->push_back(ijet->photonMultiplicity());
-	elm_           ->push_back(ijet->electronMultiplicity());
-	mum_           ->push_back(ijet->muonMultiplicity());
-        pt_            ->push_back(ijet->pt());
+  for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {
+      if(ijet->pt() < 20) continue;
+      //if (isGoodJet(*ijet)) {
+          cout << "Good jet " << ijet->pt() << endl;
+          flavor_        ->push_back(ijet->partonFlavour());
+          flavorHadron_  ->push_back(ijet->hadronFlavour());
+          chf_           ->push_back(ijet->chargedHadronEnergyFraction());
+          nhf_           ->push_back(ijet->neutralHadronEnergyFraction());
+          phf_           ->push_back(ijet->photonEnergyFraction());
+          elf_           ->push_back(ijet->electronEnergyFraction());
+          muf_           ->push_back(ijet->muonEnergyFraction());
+          chm_           ->push_back(ijet->chargedHadronMultiplicity());
+          nhm_           ->push_back(ijet->neutralHadronMultiplicity());
+          phm_           ->push_back(ijet->photonMultiplicity());
+          elm_           ->push_back(ijet->electronMultiplicity());
+          mum_           ->push_back(ijet->muonMultiplicity());
 
-	mPFUncCHS->setJetEta(ijet->eta());
-	mPFUncCHS->setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
-	unc = mPFUncCHS->getUncertainty(true);
-	cor_           ->push_back(1+unc);
-	unc_           ->push_back(unc);
-        phi_           ->push_back(ijet->phi());
-        eta_           ->push_back(ijet->eta());
-        mass_          ->push_back(ijet->mass());
-        energy_        ->push_back(ijet->energy());
-        vP4.push_back(ijet->p4());
-        ht_ += ijet->pt();
-        nJets_++;
-    }// if good jet
+          pt_            ->push_back(ijet->pt());
+          phi_           ->push_back(ijet->phi());
+          eta_           ->push_back(ijet->eta());
+          mass_          ->push_back(ijet->mass());
+          energy_        ->push_back(ijet->energy());
+
+          mPFUncCHS->setJetEta(ijet->eta());
+          mPFUncCHS->setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
+          unc = mPFUncCHS->getUncertainty(true);
+          unc_           ->push_back(unc);
+          ht_ += ijet->pt();
+          ++nJets_;
+      //}// if good jet
   }// jet loop       
   rho_    = *rho;
   nVtx_   = recVtxs->size();
@@ -312,13 +331,16 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
  
   cutFlowHisto_->Fill("All",1);
   if (iEvent.isRealData()) {
+    outTree_->Fill();
+    /*
     if (cut_RECO) {
       cutFlowHisto_->Fill("At least one jet",1);
       if (passTrigger || 1) {
         cutFlowHisto_->Fill("Trigger",1);
-        outTree_->Fill();
       }
     }
+    */
+
   } 
   else {
     if (cut_RECO) {
@@ -347,7 +369,6 @@ void BoostedTTbarFlatTreeProducer::initialize()
   flavor_         ->clear();
   flavorHadron_   ->clear();
   pt_             ->clear();
-  cor_             ->clear();
   unc_             ->clear();
   eta_            ->clear();
   phi_            ->clear();
