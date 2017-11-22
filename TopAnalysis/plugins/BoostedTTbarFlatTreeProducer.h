@@ -57,6 +57,84 @@
 
 using namespace reco;
 
+struct Parameters {
+    edm::EDGetTokenT<pat::JetCollection> jetsToken;
+    edm::EDGetTokenT<GenJetCollection> genjetsToken;
+    //  muonsToken         
+    //electronsToken       
+    //metToken             
+    edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
+    edm::EDGetTokenT<double> rhoToken;
+    edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
+    edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken;
+    edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescalesToken;
+    edm::EDGetTokenT<edm::View<PileupSummaryInfo> > pupInfoToken;
+    edm::EDGetTokenT<GenEventInfoProduct> genEvtInfoToken;
+    edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken;
+    edm::EDGetTokenT<LHEEventProduct> lheEvtInfoToken;
+    edm::EDGetTokenT<LHERunInfoProduct> runInfoToken;
+
+    std::vector<std::string> triggerNames_;
+
+    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
+
+    double etaMax_;
+    double ptMin_ ;
+    double ptMinLeading_;
+    bool isMC_ ;
+    bool isPrint_ ;
+    bool saveWeights_;
+    bool debug_ ;
+    double GenptMin_;
+    double GenetaMax_;
+
+    edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
+
+    Parameters(edm::ParameterSet const& cfg,  edm::ConsumesCollector && iC) {
+        jetsToken             = iC.consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
+        genjetsToken          = iC.consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
+        //  muonsToken            = iC.consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
+        //electronsToken        = iC.consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
+        //metToken              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
+        candsToken            = iC.consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
+        rhoToken              = iC.consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
+        recVtxsToken          = iC.consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
+        triggerResultsToken   = iC.consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults"));
+        triggerPrescalesToken = iC.consumes<pat::PackedTriggerPrescales>(cfg.getParameter<edm::InputTag>("triggerPrescales"));
+        pupInfoToken          = iC.consumes<edm::View<PileupSummaryInfo> >(edm::InputTag("slimmedAddPileupInfo"));
+        genEvtInfoToken       = iC.consumes<GenEventInfoProduct>(edm::InputTag("generator"));
+        genParticlesToken     = iC.consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"));
+        lheEvtInfoToken       = iC.consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"));
+        runInfoToken          = iC.consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"));
+        //srcBtag_              = cfg.getParameter<std::string>("btagger");
+        //  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
+        triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
+
+        triggerObjects_  = iC.consumes<pat::TriggerObjectStandAloneCollection>(cfg.getParameter<edm::InputTag> ("triggerObjects"));
+
+        etaMax_               = cfg.getParameter<double>("etaMax");
+        ptMin_                = cfg.getParameter<double>("ptMin");
+        ptMinLeading_         = cfg.getParameter<double>("ptMinLeading");
+        //massMin_              = cfg.getParameter<double>("massMin");
+        //btagMin_              = cfg.getParameter<double>("btagMin");
+        //minMuPt_              = cfg.getParameter<double>("minMuPt");
+        //minElPt_              = cfg.getParameter<double>("minElPt");
+        isMC_                 = cfg.getUntrackedParameter<bool>("isMC",false);
+        isPrint_              = cfg.getUntrackedParameter<bool>("isPrint",false);
+        saveWeights_          = cfg.getUntrackedParameter<bool>("saveWeights",true);
+        debug_                = cfg.getUntrackedParameter<bool>("debug",false);
+        GenptMin_             = cfg.getUntrackedParameter<double>("GenptMin");
+        GenetaMax_            = cfg.getUntrackedParameter<double>("GenetaMax");
+
+        jetFlavourInfosToken_ = iC.consumes<reco::JetFlavourInfoMatchingCollection>( cfg.getParameter<edm::InputTag>("jetFlavourInfos"));
+    }
+};
+
+
+
+
+
+
 class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer 
 {
   public:
@@ -75,28 +153,16 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     virtual bool isGoodJet(const pat::Jet &jet);
 //    float getPFMiniIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,const reco::Candidate *cand);
     void initialize();
+
     //---- configurable parameters --------  
-    edm::EDGetTokenT<pat::JetCollection> jetsToken;
-    edm::EDGetTokenT<GenJetCollection> genjetsToken;
+    Parameters p;
+
     //    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
     //edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
     //edm::EDGetTokenT<pat::METCollection> metToken;
-    edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
-    edm::EDGetTokenT<double> rhoToken;
-    edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
-    edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken;
-    edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescalesToken;
-    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
-    edm::EDGetTokenT<edm::View<PileupSummaryInfo> > pupInfoToken;
-    edm::EDGetTokenT<GenEventInfoProduct> genEvtInfoToken;
-    edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken;
-    edm::EDGetTokenT<LHEEventProduct> lheEvtInfoToken;
-    edm::EDGetTokenT<LHERunInfoProduct> runInfoToken;
  
     //    std::string srcBtag_,xmlFile_;
-    std::vector<std::string> triggerNames_;
-    double etaMax_,ptMin_,ptMinLeading_,massMin_,btagMin_,minMuPt_,minElPt_,GenetaMax_,GenptMin_;
-    bool   isMC_,isPrint_,saveWeights_,debug_; 
+
     //---------------------------------------------------
     edm::Service<TFileService> fs_;
     TTree *outTree_; 

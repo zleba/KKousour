@@ -23,62 +23,18 @@ using namespace std;
 using namespace reco;
 using namespace fastjet;
 
-BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet const& cfg)
-{ 
-  jetsToken             = consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
-  genjetsToken          = consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
-  //  muonsToken            = consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
-  //electronsToken        = consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
-  //metToken              = consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
-  candsToken            = consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
-  rhoToken              = consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
-  recVtxsToken          = consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
-  triggerResultsToken   = consumes<edm::TriggerResults>(cfg.getParameter<edm::InputTag>("triggerResults"));
-  triggerPrescalesToken = consumes<pat::PackedTriggerPrescales>(cfg.getParameter<edm::InputTag>("triggerPrescales"));
-  pupInfoToken          = consumes<edm::View<PileupSummaryInfo> >(edm::InputTag("slimmedAddPileupInfo"));
-  genEvtInfoToken       = consumes<GenEventInfoProduct>(edm::InputTag("generator"));
-  genParticlesToken     = consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"));
-  lheEvtInfoToken       = consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"));
-  runInfoToken          = consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"));
-  //srcBtag_              = cfg.getParameter<std::string>("btagger");
-  //  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
-  triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
+BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet const& cfg) : p(cfg, consumesCollector())
+{ }
 
-  triggerObjects_  = consumes<pat::TriggerObjectStandAloneCollection>(cfg.getParameter<edm::InputTag> ("triggerObjects"));
 
-  etaMax_               = cfg.getParameter<double>("etaMax");
-  ptMin_                = cfg.getParameter<double>("ptMin");
-  ptMinLeading_         = cfg.getParameter<double>("ptMinLeading");
-  //massMin_              = cfg.getParameter<double>("massMin");
-  //btagMin_              = cfg.getParameter<double>("btagMin");
-  //minMuPt_              = cfg.getParameter<double>("minMuPt");
-  //minElPt_              = cfg.getParameter<double>("minElPt");
-  isMC_                 = cfg.getUntrackedParameter<bool>("isMC",false);
-  isPrint_              = cfg.getUntrackedParameter<bool>("isPrint",false);
-  saveWeights_          = cfg.getUntrackedParameter<bool>("saveWeights",true);
-  debug_                = cfg.getUntrackedParameter<bool>("debug",false);
-  GenptMin_             = cfg.getUntrackedParameter<double>("GenptMin");
-  GenetaMax_            = cfg.getUntrackedParameter<double>("GenetaMax");
-
-  jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( cfg.getParameter<edm::InputTag>("jetFlavourInfos"));
-  
-  //Gen Jet information
-  fAKJetDef = new fastjet::JetDefinition(fastjet::antikt_algorithm, 0.8);
-  int activeAreaRepeats = 1;
-  double ghostArea      = 0.01;
-  double ghostEtaMax    = 7.0;
-  fActiveArea           = new fastjet::ActiveAreaSpec (ghostEtaMax,activeAreaRepeats,ghostArea);
-  fAreaDefinition       = new fastjet::AreaDefinition (fastjet::active_area_explicit_ghosts, *fActiveArea );
-  sd = new fastjet::contrib::SoftDrop(0.0,0.1,0.8);//beta_, zCut_, R0 );
-}
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginJob() 
 {
   //--- book the trigger histograms ---------
   triggerNamesHisto_ = fs_->make<TH1F>("TriggerNames","TriggerNames",1,0,1);
   triggerNamesHisto_->SetCanExtend(TH1::kAllAxes);
-  for(unsigned i=0;i<triggerNames_.size();i++) {
-    triggerNamesHisto_->Fill(triggerNames_[i].c_str(),1);
+  for(unsigned i=0;i<p.triggerNames_.size();i++) {
+    triggerNamesHisto_->Fill(p.triggerNames_[i].c_str(),1);
   }
   triggerPassHisto_ = fs_->make<TH1F>("TriggerPass","TriggerPass",1,0,1);
   triggerPassHisto_->SetCanExtend(TH1::kAllAxes);
@@ -166,8 +122,8 @@ void BoostedTTbarFlatTreeProducer::endJob()
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
 {
-  if (isMC_ && debug_) {
-    iRun.getByToken(runInfoToken,runInfo);
+  if (p.isMC_ && p.debug_) {
+    iRun.getByToken(p.runInfoToken,runInfo);
     for(vector<LHERunInfoProduct::Header>::const_iterator it = runInfo->headers_begin();it != runInfo->headers_end(); it++) {
       cout<<it->tag()<<endl;
       vector<string> lines = it->lines();
@@ -210,15 +166,15 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 {
   initialize();
 
-  if(isPrint_) cout<<"**** EVENT ****"<<endl;
+  if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
 
-  iEvent.getByToken(jetsToken,jets);
-  iEvent.getByToken(candsToken,cands);
-  iEvent.getByToken(rhoToken,rho);
-  iEvent.getByToken(recVtxsToken,recVtxs);  
-  iEvent.getByToken(triggerResultsToken,triggerResults);  
-  iEvent.getByToken(triggerPrescalesToken,triggerPrescales); 
-  iEvent.getByToken(triggerObjects_, triggerObjects);
+  iEvent.getByToken(p.jetsToken,jets);
+  iEvent.getByToken(p.candsToken,cands);
+  iEvent.getByToken(p.rhoToken,rho);
+  iEvent.getByToken(p.recVtxsToken,recVtxs);  
+  iEvent.getByToken(p.triggerResultsToken,triggerResults);  
+  iEvent.getByToken(p.triggerPrescalesToken,triggerPrescales); 
+  iEvent.getByToken(p.triggerObjects_, triggerObjects);
 
   triggerBit_->clear();
   triggerPre_->clear();
@@ -229,8 +185,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   //assert(triggerObjects-);
   //cout << "TrigArr val " <<  triggerObjects << endl;
   //cout << "Trig size " << triggerObjects->size() << endl;
-  for (pat::TriggerObjectStandAlone obj : *triggerObjects) { // note: not "const &" since we want to call unpackPathNames
-      cout << "hi Radek" << endl;
+  //for (pat::TriggerObjectStandAlone obj : *triggerObjects) { // note: not "const &" since we want to call unpackPathNames
+      //cout << "hi Radek" << endl;
       //obj.unpackPathNames(names);
 
       //std::vector<std::string> pathNamesAll  = obj.pathNames(false);
@@ -240,25 +196,25 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       //TLorentzVector P4;                                                                                                                                         
       //P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
       //LorentzVector qcdhltobj(P4.Px(),P4.Py(),P4.Pz(),P4.E());             
-  }
+  //}
 
 
   triggerPassHisto_->Fill("totalEvents",1);
   bool passTrigger(false);
-  for(unsigned int k=0;k<triggerNames_.size();k++) {
+  for(unsigned int k=0; k<p.triggerNames_.size(); ++k) {
     bool bit(false);
     int pre(1);
-    for(unsigned int itrig=0;itrig<triggerResults->size();itrig++) {
+    for(unsigned int itrig=0; itrig<triggerResults->size(); ++itrig) {
       //cout<<"Trigger name of index "<<itrig<<" "<<string(names.triggerName(itrig))<<endl;
       string trigger_name = string(names.triggerName(itrig));
       //--- erase the last character, i.e. the version number----
       trigger_name.pop_back();
-      if (trigger_name == triggerNames_[k]) {
+      if (trigger_name == p.triggerNames_[k]) {
         cout << "Puppi found " << trigger_name  << endl;
         bit = true;//triggerResults->accept(itrig);
         pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
-          triggerPassHisto_->Fill(triggerNames_[k].c_str(),1);
+          triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
         } 
       }
     }
