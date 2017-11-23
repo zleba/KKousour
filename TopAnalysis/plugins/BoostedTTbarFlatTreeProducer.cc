@@ -175,6 +175,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   iEvent.getByToken(p.triggerResultsToken,triggerResults);  
   iEvent.getByToken(p.triggerPrescalesToken,triggerPrescales); 
   iEvent.getByToken(p.triggerObjects_, triggerObjects);
+  iEvent.getByToken(p.metToken,met);
 
   triggerBit_->clear();
   triggerPre_->clear();
@@ -282,6 +283,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   run_    = iEvent.id().run();
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
+
+  cout <<"MET size " <<  met->size() << endl;
+  cout <<"MET Ratio " <<  (*met)[0].et() / (*met)[0].sumEt() << endl;
 
   bool cut_RECO = (nJets_ >= 1);  
  

@@ -62,7 +62,7 @@ struct Parameters {
     edm::EDGetTokenT<GenJetCollection> genjetsToken;
     //  muonsToken         
     //electronsToken       
-    //metToken             
+    edm::EDGetTokenT<pat::METCollection> metToken;
     edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
     edm::EDGetTokenT<double> rhoToken;
     edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
@@ -95,7 +95,7 @@ struct Parameters {
         genjetsToken          = iC.consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
         //  muonsToken            = iC.consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
         //electronsToken        = iC.consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
-        //metToken              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
+        metToken              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
         candsToken            = iC.consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
         rhoToken              = iC.consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
         recVtxsToken          = iC.consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
@@ -159,7 +159,6 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
 
     //    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
     //edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
-    //edm::EDGetTokenT<pat::METCollection> metToken;
  
     //    std::string srcBtag_,xmlFile_;
 
