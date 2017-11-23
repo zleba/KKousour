@@ -24,7 +24,10 @@
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/JetReco/interface/JetCollection.h"
+#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -62,7 +65,9 @@ struct Parameters {
     edm::EDGetTokenT<GenJetCollection> genjetsToken;
     //  muonsToken         
     //electronsToken       
-    edm::EDGetTokenT<pat::METCollection> metToken;
+    edm::EDGetTokenT<pat::METCollection> met1Token;
+    edm::EDGetTokenT<pat::METCollection> met2Token;
+    edm::EDGetTokenT<pat::METCollection> met3Token;
     edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
     edm::EDGetTokenT<double> rhoToken;
     edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
@@ -76,7 +81,9 @@ struct Parameters {
 
     std::vector<std::string> triggerNames_;
 
-    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
+    edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjectsToken;
+
+    HLTConfigProvider hltConfig_;
 
     double etaMax_;
     double ptMin_ ;
@@ -95,7 +102,9 @@ struct Parameters {
         genjetsToken          = iC.consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
         //  muonsToken            = iC.consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
         //electronsToken        = iC.consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
-        metToken              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met"));
+        met1Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met1"));
+	met2Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met2"));
+	met3Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met3"));
         candsToken            = iC.consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
         rhoToken              = iC.consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
         recVtxsToken          = iC.consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
@@ -110,7 +119,7 @@ struct Parameters {
         //  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
         triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
 
-        triggerObjects_  = iC.consumes<pat::TriggerObjectStandAloneCollection>(cfg.getParameter<edm::InputTag> ("triggerObjects"));
+        triggerObjectsToken  = iC.consumes<pat::TriggerObjectStandAloneCollection>(cfg.getParameter<edm::InputTag>("triggerObjects"));
 
         etaMax_               = cfg.getParameter<double>("etaMax");
         ptMin_                = cfg.getParameter<double>("ptMin");
@@ -170,8 +179,10 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     TH1F *triggerPassHisto_,*triggerNamesHisto_;
     //---- output TREE variables ------
     //---- global event variables -----
-    int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_;
+    int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_,nTriggerObjects_;
     float rho_,met_,metSig_,ht_,mva_,pvRho_,pvz_,pvndof_,pvchi2_,mvaGen_,metGenSig_;
+    float metEt1_,metSigEt1_,metSumEt1_,metEt2_,metSigEt2_,metSumEt2_,metEt3_,metSigEt3_,metSumEt3_;
+ 
     std::vector<bool> *triggerBit_;
     std::vector<int>  *triggerPre_;
     //---- top variables --------------
@@ -181,7 +192,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- jet variables --------------
     std::vector<bool>  *isBtag_;
     std::vector<int>   *flavor_,*nSubJets_,*nSubGenJets_,*nBSubJets_,*flavorHadron_;
-    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*tau1_,*tau2_,*tau3_;
+    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*trigobjpt_, *trigobjeta_, *trigobjphi_;
     std::vector<int> *chm_, *nhm_, *phm_, *elm_, *mum_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
@@ -224,13 +235,15 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<GenJetCollection> genjets;
     edm::Handle<pat::MuonCollection> muons;
     edm::Handle<pat::ElectronCollection> electrons;
-    edm::Handle<pat::METCollection> met;
+    edm::Handle<pat::METCollection> met1;
+    edm::Handle<pat::METCollection> met2;
+    edm::Handle<pat::METCollection> met3;
     edm::Handle<pat::PackedCandidateCollection> cands;
     edm::Handle<double> rho;
     edm::Handle<reco::VertexCollection> recVtxs;
     edm::Handle<edm::TriggerResults> triggerResults;
     edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
-    edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+    edm::Handle<pat::TriggerObjectStandAlone> triggerObjects;
     edm::Handle<edm::View<PileupSummaryInfo> > pupInfo;
     edm::Handle<edm::View<reco::GenParticle> > genParticles;
     edm::Handle<GenEventInfoProduct> genEvtInfo;

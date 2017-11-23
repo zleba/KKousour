@@ -15,7 +15,6 @@
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
-#include <cassert>
 
 #include "KKousour/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
 
@@ -55,6 +54,12 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
+  outTree_->Branch("metEt1"               ,&metEt1_            ,"metEt1_/F");
+  outTree_->Branch("metSumEt1"            ,&metSumEt1_         ,"metSumEt1_/F");
+  outTree_->Branch("metEt2"               ,&metEt2_            ,"metEt2_/F");
+  outTree_->Branch("metSumEt2"            ,&metSumEt2_         ,"metSumEt2_/F");
+  outTree_->Branch("metEt3"               ,&metEt3_            ,"metEt3_/F");
+  outTree_->Branch("metSumEt3"            ,&metSumEt3_         ,"metSumEt3_/F");
   //------------------------------------------------------------------
   flavor_         = new std::vector<int>;
   flavorHadron_   = new std::vector<int>;
@@ -95,6 +100,15 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   triggerPre_ = new std::vector<int>;
   outTree_->Branch("triggerBit"           ,"vector<bool>"      ,&triggerBit_);
   outTree_->Branch("triggerPre"           ,"vector<int>"       ,&triggerPre_);
+
+  trigobjpt_            = new std::vector<float>;
+  trigobjeta_           = new std::vector<float>;
+  trigobjphi_           = new std::vector<float>;
+  outTree_->Branch("trigobjPt"            ,"vector<float>"     ,&trigobjpt_);
+  outTree_->Branch("trigobjEta"           ,"vector<float>"     ,&trigobjeta_);
+  outTree_->Branch("trigobjPhi"           ,"vector<float>"     ,&trigobjphi_);
+  outTree_->Branch("nTriggerObject", &nTriggerObjects_, "nTriggerObjects_/I");
+
   cout<<"Begin job finished"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -118,6 +132,9 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete phm_;
   delete elm_;
   delete mum_;
+  delete trigobjpt_;
+  delete trigobjeta_;
+  delete trigobjphi_;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
@@ -166,7 +183,11 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 {
   initialize();
 
+  //  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+
   if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
+
+  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
 
   iEvent.getByToken(p.jetsToken,jets);
   iEvent.getByToken(p.candsToken,cands);
@@ -174,8 +195,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   iEvent.getByToken(p.recVtxsToken,recVtxs);  
   iEvent.getByToken(p.triggerResultsToken,triggerResults);  
   iEvent.getByToken(p.triggerPrescalesToken,triggerPrescales); 
-  iEvent.getByToken(p.triggerObjects_, triggerObjects);
-  iEvent.getByToken(p.metToken,met);
+  iEvent.getByToken(p.triggerObjectsToken, triggerObjects);
+  iEvent.getByToken(p.met1Token,met1);
+  iEvent.getByToken(p.met2Token,met2);
+  iEvent.getByToken(p.met3Token,met3);
 
   triggerBit_->clear();
   triggerPre_->clear();
@@ -222,7 +245,18 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     //--- if at least one monitored trigger has fired passTrigger becomes true
     passTrigger += bit;
     triggerBit_->push_back(bit); 
-    triggerPre_->push_back(pre);   
+    triggerPre_->push_back(pre);
+    /*
+    nTriggerObjects_ = 0;
+    cout<<"let find HLTobject"<<endl;
+    for(pat::TriggerObjectStandAlone obj: *triggerObjects){
+      obj.unpackPathNames(names);
+      trigobjpt_     ->push_back(obj.pt());
+      trigobjeta_    ->push_back(obj.phi());
+      trigobjphi_    ->push_back(obj.eta());
+      nTriggerObjects_++;
+    }
+    */
   }   
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
@@ -283,9 +317,12 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   run_    = iEvent.id().run();
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
-
-  cout <<"MET size " <<  met->size() << endl;
-  cout <<"MET Ratio " <<  (*met)[0].et() / (*met)[0].sumEt() << endl;
+  metEt1_ = (*met1)[0].et();
+  metSumEt1_ = (*met1)[0].sumEt();
+  metEt2_ = (*met2)[0].et();
+  metSumEt2_ = (*met2)[0].sumEt();
+  metEt3_ = (*met3)[0].et();
+  metSumEt3_ =(*met3)[0].sumEt();
 
   bool cut_RECO = (nJets_ >= 1);  
  
@@ -322,6 +359,12 @@ void BoostedTTbarFlatTreeProducer::initialize()
   nVtx_           = -1;
   nJets_          = -1;
   rho_            = -1;
+  metEt1_         = -1;
+  metEt2_         = -1;
+  metEt3_         = -1;
+  metSumEt1_      = -1;
+  metSumEt2_      = -1;
+  metSumEt3_      = -1;
   pvRho_          = -999;
   pvz_            = -999;
   pvndof_         = -999;
@@ -344,6 +387,7 @@ void BoostedTTbarFlatTreeProducer::initialize()
   phm_            ->clear();
   elm_            ->clear();
   mum_            ->clear();
+  nTriggerObjects_ = -1;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 BoostedTTbarFlatTreeProducer::~BoostedTTbarFlatTreeProducer() 
