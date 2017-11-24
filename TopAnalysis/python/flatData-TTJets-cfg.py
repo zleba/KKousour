@@ -92,6 +92,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   triggerObjects  = cms.InputTag("slimmedPatTrigger"),
   isMC             = cms.untracked.bool(False),                              
   genjets          = cms.untracked.InputTag('slimmedGenJetsAK8'),
+  SkipEvent = cms.untracked.vstring('ProductNotFound'),
   GenptMin        = cms.untracked.double(60),
   GenetaMax       = cms.untracked.double(2.5),
   jetFlavourInfos = cms.InputTag("ak8genJetFlavourInfos"),#ak8gen                 

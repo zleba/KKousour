@@ -208,7 +208,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
 
-  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects1;
 
   iEvent.getByToken(p.jetsToken,jets);
   iEvent.getByToken(p.candsToken,cands);
@@ -216,7 +216,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   iEvent.getByToken(p.recVtxsToken,recVtxs);  
   iEvent.getByToken(p.triggerResultsToken,triggerResults);  
   iEvent.getByToken(p.triggerPrescalesToken,triggerPrescales); 
-  iEvent.getByToken(p.triggerObjectsToken, triggerObjects);
+  iEvent.getByToken(p.triggerObjectsToken, triggerObjects1);
   iEvent.getByToken(p.met1Token,met1);
   iEvent.getByToken(p.met2Token,met2);
   iEvent.getByToken(p.met3Token,met3);
@@ -270,15 +270,15 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     triggerPre_->push_back(pre);
     
     nTriggerObjects_ = 0;
-    /*  cout<<"let find HLTobject"<<endl;
-    for(pat::TriggerObjectStandAlone obj: *triggerObjects){
-      obj.unpackPathNames(names);
-      trigobjpt_     ->push_back(obj.pt());
-      trigobjeta_    ->push_back(obj.phi());
-      trigobjphi_    ->push_back(obj.eta());
+      cout<<"let find HLTobject"<<endl;
+    for(pat::TriggerObjectStandAlone obj: *triggerObjects1){
+      // obj.unpackPathNames(names);
+      //trigobjpt_     ->push_back(obj.pt());
+      //trigobjeta_    ->push_back(obj.phi());
+      //trigobjphi_    ->push_back(obj.eta());
       nTriggerObjects_++;
     }
-    */
+    
   }   
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
