@@ -227,8 +227,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   //-------------- Trigger Info -----------------------------------
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
 
-  //assert(triggerObjects-);
-  //  cout << "TrigArr val " <<  triggerObjects << endl;
+  //  assert(triggerObjects1);
+  // cout << "TrigArr val " <<  triggerObjects << endl;
   //cout << "Trig size " << triggerObjects->size() << endl;
   //for (pat::TriggerObjectStandAlone obj : *triggerObjects) { // note: not "const &" since we want to call unpackPathNames
       //cout << "hi Radek" << endl;
@@ -256,9 +256,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       trigger_name.pop_back();
       if (trigger_name == p.triggerNames_[k]) {
         cout << "Puppi found " << trigger_name  << endl;
-        bit = triggerResults->accept(itrig);
-	cout<<bit<<endl;
-        pre = triggerPrescales->getPrescaleForIndex(itrig);
+        bit = true; //triggerResults->accept(itrig);
+        cout<<bit<<endl;
+	pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
           triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
         } 
@@ -270,15 +270,20 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     triggerPre_->push_back(pre);
     
     nTriggerObjects_ = 0;
-      cout<<"let find HLTobject"<<endl;
+    //cout<<"let find HLTobject"<<endl;
     for(pat::TriggerObjectStandAlone obj: *triggerObjects1){
-      // obj.unpackPathNames(names);
-      //trigobjpt_     ->push_back(obj.pt());
-      //trigobjeta_    ->push_back(obj.phi());
-      //trigobjphi_    ->push_back(obj.eta());
+       obj.unpackPathNames(names);
+       //  trigobjpt_     ->push_back(obj.pt());
+       //  trigobjeta_    ->push_back(obj.phi());
+       //  trigobjphi_    ->push_back(obj.eta());
+       std::vector<std::string> pathNamesAll  = obj.pathNames(false);                                                                            
+       std::vector<std::string> pathNamesLast = obj.pathNames(true);
+              cout <<obj.pt()<<"\t"<<pathNamesAll.size()<<"\t"<<pathNamesLast.size()<<endl;    
+        for(unsigned int j=0; j<pathNamesAll.size();j++)cout<<"all\t"<<pathNamesAll[j]<<endl;
+       for(unsigned int j=0; j<pathNamesLast.size();j++)cout<<"last\t"<<pathNamesLast[j]<<endl;
       nTriggerObjects_++;
     }
-    
+    cout<<"Number of HLT objects\t"<<nTriggerObjects_ <<endl;
   }   
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);

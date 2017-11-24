@@ -89,7 +89,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   genparticles     = cms.untracked.InputTag('prunedGenParticles'),
   triggerNames     = cms.vstring('HLT_AK8PFJet40_v','HLT_AK8PFJet60_v','HLT_AK8PFJet80_v','HLT_AK8PFJet140_v','HLT_AK8PFJet200_v','HLT_AK8PFJet260_v','HLT_AK8PFJet320_v','HLT_AK8PFJet400_v','HLT_AK8PFJet450_v','HLT_AK8PFJet500_v'),
   triggerResults   = cms.InputTag('TriggerResults','','HLT'),
-  triggerObjects  = cms.InputTag("slimmedPatTrigger"),
+  triggerObjects  = cms.InputTag("selectedPatTrigger"),
   isMC             = cms.untracked.bool(False),                              
   genjets          = cms.untracked.InputTag('slimmedGenJetsAK8'),
   SkipEvent = cms.untracked.vstring('ProductNotFound'),
@@ -104,12 +104,10 @@ process.ak4 = process.ak8.clone(
     triggerNames    = cms.vstring('HLT_AK4PFJet40_v','HLT_AK4PFJet60_v','HLT_AK4PFJet80_v','HLT_AK4PFJet140_v','HLT_AK4PFJet200_v','HLT_AK4PFJet260_v','HLT_AK4PFJet320_v','HLT_AK4PFJet400_v','HLT_AK4PFJet450_v','HLT_AK4PFJet500_v'),
     genjets         = cms.untracked.InputTag('slimmedGenJets'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
-    triggerObjects = cms.InputTag("slimmedPatTrigger"),
 )
 
 process.ak4PUPPI = process.ak8.clone(
     jets            = cms.InputTag('slimmedJetsPuppi'),
-    triggerObjects  = cms.InputTag('slimmedPatTrigger'),
     genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
