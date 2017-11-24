@@ -100,6 +100,13 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   phm_            = new std::vector<int>;
   elm_            = new std::vector<int>;
   mum_            = new std::vector<int>;
+
+  HLTpt_          = new std::vector<float>;
+  HLTeta_         = new std::vector<float>;
+  HLTphi_         = new std::vector<float>;
+  HLTmass_        = new std::vector<float>;
+
+
   outTree_->Branch("jetPt"                ,"vector<float>"     ,&pt_);
   outTree_->Branch("jetUnc"               ,"vector<float>"     ,&unc_);
   outTree_->Branch("jetEta"               ,"vector<float>"     ,&eta_);
@@ -116,6 +123,14 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("jetPhm"               ,"vector<int>"       ,&phm_);
   outTree_->Branch("jetElm"               ,"vector<int>"       ,&elm_);
   outTree_->Branch("jetMum"               ,"vector<int>"       ,&mum_);
+
+
+  //------------------------------------------------------------------
+  outTree_->Branch("HLTjetPt"             ,"vector<float>"     ,&HLTpt_);
+  outTree_->Branch("HLTjetEta"            ,"vector<float>"     ,&HLTeta_);
+  outTree_->Branch("HLTjetPhi"            ,"vector<float>"     ,&HLTphi_);
+  outTree_->Branch("HLTjetMass"           ,"vector<float>"     ,&HLTmass_);
+
   //------------------------------------------------------------------
   triggerBit_ = new std::vector<bool>;
   triggerPre_ = new std::vector<int>;
@@ -156,6 +171,13 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete trigobjpt_;
   delete trigobjeta_;
   delete trigobjphi_;
+
+  delete HLTpt_;
+  delete HLTeta_;
+  delete HLTphi_;
+  delete HLTmass_;
+
+
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
@@ -244,6 +266,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   //}
 
 
+  set<string> trigNames;
   triggerPassHisto_->Fill("totalEvents",1);
   bool passTrigger(false);
   for(unsigned int k=0; k<p.triggerNames_.size(); ++k) {
@@ -255,10 +278,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       //--- erase the last character, i.e. the version number----
       trigger_name.pop_back();
       if (trigger_name == p.triggerNames_[k]) {
-        cout << "Puppi found " << trigger_name  << endl;
-        bit = true; //triggerResults->accept(itrig);
-        cout<<bit<<endl;
-	pre = triggerPrescales->getPrescaleForIndex(itrig);
+        bit = triggerResults->accept(itrig);
+        if(bit) trigNames.insert(trigger_name);
+        pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
           triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
         } 
@@ -269,22 +291,99 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     triggerBit_->push_back(bit); 
     triggerPre_->push_back(pre);
     
-    nTriggerObjects_ = 0;
-    //cout<<"let find HLTobject"<<endl;
-    for(pat::TriggerObjectStandAlone obj: *triggerObjects1){
-       obj.unpackPathNames(names);
-       //  trigobjpt_     ->push_back(obj.pt());
-       //  trigobjeta_    ->push_back(obj.phi());
-       //  trigobjphi_    ->push_back(obj.eta());
-       std::vector<std::string> pathNamesAll  = obj.pathNames(false);                                                                            
-       std::vector<std::string> pathNamesLast = obj.pathNames(true);
-              cout <<obj.pt()<<"\t"<<pathNamesAll.size()<<"\t"<<pathNamesLast.size()<<endl;    
-        for(unsigned int j=0; j<pathNamesAll.size();j++)cout<<"all\t"<<pathNamesAll[j]<<endl;
-       for(unsigned int j=0; j<pathNamesLast.size();j++)cout<<"last\t"<<pathNamesLast[j]<<endl;
-      nTriggerObjects_++;
-    }
-    cout<<"Number of HLT objects\t"<<nTriggerObjects_ <<endl;
   }   
+
+  //exit(0);
+  /*
+  set<string> trigNames;
+  //for(unsigned int k=0; k<p.triggerNames_.size(); ++k) {
+  for(unsigned int itrig=0; itrig<triggerResults->size(); ++itrig) {
+      string trigger_name = string(names.triggerName(itrig));
+      trigger_name.pop_back();
+
+      bool isInOurTriggs = false;
+      for(unsigned int k=0; k<p.triggerNames_.size(); ++k) 
+          if (trigger_name == p.triggerNames_[k]) {isInOurTriggs = true; break; }
+
+      if(!isInOurTriggs) continue;
+
+      trigNames.insert(trigger_name);
+      cout << "Triggers which fired " <<itrig <<" "<< trigger_name << endl;
+  }
+
+
+  cout << "My nice triggers start" << endl;
+  for(auto a : trigNames)
+      cout << a << endl;
+  cout << "My nice triggers end" << endl;
+  */
+
+
+  nTriggerObjects_ = 0;
+  //cout<<"let find HLTobject"<<endl;
+
+  cout << "Starting HLT loop" << endl;
+  vector<TLorentzVector> hltVecs;
+  for(pat::TriggerObjectStandAlone obj: *triggerObjects1){
+      obj.unpackPathNames(names);
+      //  trigobjpt_     ->push_back(obj.pt());
+      //  trigobjeta_    ->push_back(obj.phi());
+      //  trigobjphi_    ->push_back(obj.eta());
+      std::vector<std::string> pathNamesAll  = obj.pathNames(false);                                                                            
+      std::vector<std::string> pathNamesLast = obj.pathNames(true);
+
+      if(pathNamesAll.size() == 1 && pathNamesLast.size() == 1) {
+          string nTemp = pathNamesAll[0];
+          nTemp.pop_back();
+
+      //P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
+
+          if(trigNames.count(nTemp) > 0) {
+              //cout <<"pT " <<setprecision(7) <<  obj.pt()<<"\t" << obj.eta() <<" "<< obj.phi() <<" "<< nTemp << endl;
+              TLorentzVector P4;
+              P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
+              bool isIn = false;
+              for(const auto &v : hltVecs)
+                  if(v == P4) {isIn = true; break;}
+              if(!isIn) hltVecs.push_back(P4);
+          }
+
+      }
+      /*
+      bool isOurTrigger = false;
+      for(unsigned j=0; j<pathNamesAll.size();j++) {
+          string nTemp = pathNamesAll[j];
+          nTemp.pop_back();
+          if(trigNames.count(nTemp) > 0) {
+              isOurTrigger = true;
+              break;
+          }
+      }
+      if(!isOurTrigger) continue;
+      //cout << "Now is used " << isOurTrigger << endl;
+      cout <<"pT " <<setprecision(7) <<  obj.pt()<<"\t" << obj.eta() <<" "<< obj.phi() <<" "<< pathNamesAll.size()<<"\t"<<pathNamesLast.size()<<endl;    
+      for(unsigned j=0; j<pathNamesAll.size();j++) cout<<"all\t"<<pathNamesAll[j]<<endl;
+      //for(unsigned j=0; j<pathNamesLast.size();j++) cout<<"last\t"<<pathNamesLast[j]<<endl;
+
+      */
+      ++nTriggerObjects_;
+  }
+  std::sort(hltVecs.begin(), hltVecs.end(), [](const TLorentzVector &v1, const TLorentzVector &v2) { return v1.Pt() > v2.Pt(); });
+  for(const auto &v : hltVecs) {
+    HLTpt_->push_back(v.Pt());
+    HLTeta_->push_back(v.Eta());
+    HLTphi_->push_back(v.Phi());
+    HLTmass_->push_back(v.M());
+  }
+
+
+  for(const auto &v : hltVecs)
+      cout <<"HLT " <<  v.Pt() << " "<< v.Eta()  << " "<< v.Phi() << endl;
+
+  //cout<<"Number of HLT objects\t"<<nTriggerObjects_ <<endl;
+
+
+
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
   if (cut_vtx) {
@@ -307,11 +406,11 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   double unc=0.0;
   
   if(jets->size() > 0)
-      cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
+      //cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {
-      if(ijet->pt() < 20) continue;
+      //if(ijet->pt() < 20) continue;
       //if (isGoodJet(*ijet)) {
-          cout << "Good jet " << ijet->pt() << endl;
+          //cout << "Good jet " << ijet->pt() <<" "<< ijet->eta() <<" "<< ijet->phi()<<  endl;
           flavor_        ->push_back(ijet->partonFlavour());
           flavorHadron_  ->push_back(ijet->hadronFlavour());
           chf_           ->push_back(ijet->chargedHadronEnergyFraction());
@@ -355,7 +454,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
  
   cutFlowHisto_->Fill("All",1);
   if (iEvent.isRealData()) {
-    outTree_->Fill();
+     if(passTrigger) outTree_->Fill();
     /*
     if (cut_RECO) {
       cutFlowHisto_->Fill("At least one jet",1);
@@ -414,6 +513,12 @@ void BoostedTTbarFlatTreeProducer::initialize()
   phm_            ->clear();
   elm_            ->clear();
   mum_            ->clear();
+
+  HLTeta_         ->clear();
+  HLTphi_         ->clear();
+  HLTpt_          ->clear();
+  HLTmass_        ->clear();
+
   nTriggerObjects_ = -1;
 }
 //////////////////////////////////////////////////////////////////////////////////////////

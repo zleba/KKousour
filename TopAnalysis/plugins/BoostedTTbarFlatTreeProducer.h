@@ -196,6 +196,10 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     std::vector<int> *chm_, *nhm_, *phm_, *elm_, *mum_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
+
+    //----- HLT jet variables
+    std::vector<float> *HLTpt_,*HLTeta_,*HLTphi_,*HLTmass_;
+
     //---- lepton variables -----------
     std::vector<int>   *lId_;
     std::vector<float> *lPt_,*lEta_,*lPhi_,*lE_,*lIso_;

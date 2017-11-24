@@ -101,7 +101,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
 
 process.ak4 = process.ak8.clone(
     jets            = cms.InputTag('slimmedJets'),
-    triggerNames    = cms.vstring('HLT_AK4PFJet40_v','HLT_AK4PFJet60_v','HLT_AK4PFJet80_v','HLT_AK4PFJet140_v','HLT_AK4PFJet200_v','HLT_AK4PFJet260_v','HLT_AK4PFJet320_v','HLT_AK4PFJet400_v','HLT_AK4PFJet450_v','HLT_AK4PFJet500_v'),
+    triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v'),
     genjets         = cms.untracked.InputTag('slimmedGenJets'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
@@ -134,8 +134,8 @@ process.kinFitTtFullHadEventNoW = process.kinFitTtFullHadEvent.clone(constraints
 process.ak8NoW = process.ak8.clone(kinfit = 'kinFitTtFullHadEventNoW')
 
 process.p = cms.Path(
-   process.goodJets * 
-   process.kinFitTtFullHadEvent * 
+#   process.goodJets * 
+#   process.kinFitTtFullHadEvent * 
 #   process.ak8*process.ak4 * process.ak4PUPPI 
    process.ak4
 )
