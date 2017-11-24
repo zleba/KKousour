@@ -18,6 +18,27 @@
 
 #include "KKousour/TopAnalysis/plugins/BoostedTTbarFlatTreeProducer.h"
 
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "FWCore/Common/interface/TriggerResultsByName.h"
+
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+
+#include "DataFormats/PatCandidates/interface/MET.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+
+
 using namespace std;
 using namespace reco;
 using namespace fastjet;
@@ -207,7 +228,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
 
   //assert(triggerObjects-);
-  //cout << "TrigArr val " <<  triggerObjects << endl;
+  //  cout << "TrigArr val " <<  triggerObjects << endl;
   //cout << "Trig size " << triggerObjects->size() << endl;
   //for (pat::TriggerObjectStandAlone obj : *triggerObjects) { // note: not "const &" since we want to call unpackPathNames
       //cout << "hi Radek" << endl;
@@ -235,7 +256,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       trigger_name.pop_back();
       if (trigger_name == p.triggerNames_[k]) {
         cout << "Puppi found " << trigger_name  << endl;
-        bit = true;//triggerResults->accept(itrig);
+        bit = triggerResults->accept(itrig);
+	cout<<bit<<endl;
         pre = triggerPrescales->getPrescaleForIndex(itrig);
         if (bit) {
           triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
@@ -246,9 +268,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     passTrigger += bit;
     triggerBit_->push_back(bit); 
     triggerPre_->push_back(pre);
-    /*
+    
     nTriggerObjects_ = 0;
-    cout<<"let find HLTobject"<<endl;
+    /*  cout<<"let find HLTobject"<<endl;
     for(pat::TriggerObjectStandAlone obj: *triggerObjects){
       obj.unpackPathNames(names);
       trigobjpt_     ->push_back(obj.pt());
