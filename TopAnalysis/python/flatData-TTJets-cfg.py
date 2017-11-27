@@ -8,6 +8,7 @@ process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2000))
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
         "file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
+#"root://cms-xrd-global.cern.ch//store/data/Run2017C/JetHT/MINIAOD/PromptReco-v1/000/299/368/00000/189F9B4C-876D-E711-9B34-02163E019BA4.root"),
 )
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
@@ -139,11 +140,3 @@ process.p = cms.Path(
 #   process.ak8*process.ak4 * process.ak4PUPPI 
    process.ak4
 )
-
-
-
-
-
-
-
-

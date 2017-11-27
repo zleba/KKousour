@@ -78,10 +78,11 @@ struct Parameters {
     edm::EDGetTokenT<edm::View<reco::GenParticle> > genParticlesToken;
     edm::EDGetTokenT<LHEEventProduct> lheEvtInfoToken;
     edm::EDGetTokenT<LHERunInfoProduct> runInfoToken;
-
     std::vector<std::string> triggerNames_;
-
+    std::string srcBtag_;
+    std::string btagMin_;
     edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjectsToken;
+  
 
     HLTConfigProvider hltConfig_;
 
@@ -115,7 +116,7 @@ struct Parameters {
         genParticlesToken     = iC.consumes<edm::View<reco::GenParticle> >(edm::InputTag("prunedGenParticles"));
         lheEvtInfoToken       = iC.consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"));
         runInfoToken          = iC.consumes<LHERunInfoProduct>(edm::InputTag("externalLHEProducer"));
-        //srcBtag_              = cfg.getParameter<std::string>("btagger");
+        srcBtag_              = cfg.getParameter<std::string>("btagger");
         //  xmlFile_              = cfg.getParameter<std::string>("xmlFile");
         triggerNames_         = cfg.getParameter<std::vector<std::string> >("triggerNames");
 
@@ -125,7 +126,7 @@ struct Parameters {
         ptMin_                = cfg.getParameter<double>("ptMin");
         ptMinLeading_         = cfg.getParameter<double>("ptMinLeading");
         //massMin_              = cfg.getParameter<double>("massMin");
-        //btagMin_              = cfg.getParameter<double>("btagMin");
+        btagMin_              = cfg.getParameter<double>("btagMin");
         //minMuPt_              = cfg.getParameter<double>("minMuPt");
         //minElPt_              = cfg.getParameter<double>("minElPt");
         isMC_                 = cfg.getUntrackedParameter<bool>("isMC",false);
@@ -169,7 +170,8 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
     //edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
  
-    //    std::string srcBtag_,xmlFile_;
+    std::string srcBtag_;//,xmlFile_;
+    double btagMin_;
 
     //---------------------------------------------------
     edm::Service<TFileService> fs_;
@@ -181,7 +183,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- global event variables -----
     int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_,nTriggerObjects_;
     float rho_,met_,metSig_,ht_,mva_,pvRho_,pvz_,pvndof_,pvchi2_,mvaGen_,metGenSig_;
-    float metEt1_,metSigEt1_,metSumEt1_,metEt2_,metSigEt2_,metSumEt2_,metEt3_,metSigEt3_,metSumEt3_;
+    float metEt_,metSigEt_,metSumEt_,metEtNoHF_,metSigEtNoHF_,metSumEtNoHF_,metEtPuppi_,metSigEtPuppi_,metSumEtPuppi_;
  
     std::vector<bool> *triggerBit_;
     std::vector<int>  *triggerPre_;
