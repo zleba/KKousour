@@ -75,12 +75,13 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
-  outTree_->Branch("metEt1"               ,&metEt1_            ,"metEt1_/F");
-  outTree_->Branch("metSumEt1"            ,&metSumEt1_         ,"metSumEt1_/F");
-  outTree_->Branch("metEt2"               ,&metEt2_            ,"metEt2_/F");
-  outTree_->Branch("metSumEt2"            ,&metSumEt2_         ,"metSumEt2_/F");
-  outTree_->Branch("metEt3"               ,&metEt3_            ,"metEt3_/F");
-  outTree_->Branch("metSumEt3"            ,&metSumEt3_         ,"metSumEt3_/F");
+  outTree_->Branch("metEt"                ,&metEt_             ,"metEt_/F");
+  outTree_->Branch("metSumEt"             ,&metSumEt_          ,"metSumEt_/F");
+  outTree_->Branch("metEtNoHF"            ,&metEtNoHF_         ,"metEtNoHF_/F");
+  outTree_->Branch("metSumEtNoHF"         ,&metSumEtNoHF_      ,"metSumEtNoHF_/F");
+  outTree_->Branch("metEtPuppi"           ,&metEtPuppi_        ,"metEtPuppi_/F");
+  outTree_->Branch("metSumEtPuppi"        ,&metSumEtPuppi_     ,"metSumEtPuppi_/F");
+ 
   //------------------------------------------------------------------
   flavor_         = new std::vector<int>;
   flavorHadron_   = new std::vector<int>;
@@ -100,6 +101,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   phm_            = new std::vector<int>;
   elm_            = new std::vector<int>;
   mum_            = new std::vector<int>;
+  isBtag_           = new std::vector<bool>;
 
   HLTpt_          = new std::vector<float>;
   HLTeta_         = new std::vector<float>;
@@ -123,7 +125,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("jetPhm"               ,"vector<int>"       ,&phm_);
   outTree_->Branch("jetElm"               ,"vector<int>"       ,&elm_);
   outTree_->Branch("jetMum"               ,"vector<int>"       ,&mum_);
-
+  outTree_->Branch("jetIsBtag"            ,"vector<bool>"      ,&isBtag_);
 
   //------------------------------------------------------------------
   outTree_->Branch("HLTjetPt"             ,"vector<float>"     ,&HLTpt_);
@@ -137,12 +139,6 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("triggerBit"           ,"vector<bool>"      ,&triggerBit_);
   outTree_->Branch("triggerPre"           ,"vector<int>"       ,&triggerPre_);
 
-  trigobjpt_            = new std::vector<float>;
-  trigobjeta_           = new std::vector<float>;
-  trigobjphi_           = new std::vector<float>;
-  outTree_->Branch("trigobjPt"            ,"vector<float>"     ,&trigobjpt_);
-  outTree_->Branch("trigobjEta"           ,"vector<float>"     ,&trigobjeta_);
-  outTree_->Branch("trigobjPhi"           ,"vector<float>"     ,&trigobjphi_);
   outTree_->Branch("nTriggerObject", &nTriggerObjects_, "nTriggerObjects_/I");
 
   cout<<"Begin job finished"<<endl;
@@ -151,6 +147,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 void BoostedTTbarFlatTreeProducer::endJob() 
 {  
   delete flavor_;
+  delete isBtag_;
   delete flavorHadron_;
   delete pt_;
   delete unc_;
@@ -168,16 +165,10 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete phm_;
   delete elm_;
   delete mum_;
-  delete trigobjpt_;
-  delete trigobjeta_;
-  delete trigobjphi_;
-
   delete HLTpt_;
   delete HLTeta_;
   delete HLTphi_;
   delete HLTmass_;
-
-
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup) 
@@ -188,7 +179,7 @@ void BoostedTTbarFlatTreeProducer::beginRun(edm::Run const& iRun, edm::EventSetu
       cout<<it->tag()<<endl;
       vector<string> lines = it->lines();
       for(unsigned int iLine = 0; iLine < lines.size(); iLine++) {
-        cout<< lines.at(iLine);
+	cout<< lines.at(iLine);
       }
     }
   }
@@ -228,7 +219,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   //  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
 
-  if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
+  //    if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
 
   edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects1;
 
@@ -322,13 +313,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   nTriggerObjects_ = 0;
   //cout<<"let find HLTobject"<<endl;
 
-  cout << "Starting HLT loop" << endl;
+  //  cout << "Starting HLT loop" << endl;
   vector<TLorentzVector> hltVecs;
   for(pat::TriggerObjectStandAlone obj: *triggerObjects1){
       obj.unpackPathNames(names);
-      //  trigobjpt_     ->push_back(obj.pt());
-      //  trigobjeta_    ->push_back(obj.phi());
-      //  trigobjphi_    ->push_back(obj.eta());
       std::vector<std::string> pathNamesAll  = obj.pathNames(false);                                                                            
       std::vector<std::string> pathNamesLast = obj.pathNames(true);
 
@@ -336,18 +324,17 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
           string nTemp = pathNamesAll[0];
           nTemp.pop_back();
 
-      //P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
-
           if(trigNames.count(nTemp) > 0) {
               //cout <<"pT " <<setprecision(7) <<  obj.pt()<<"\t" << obj.eta() <<" "<< obj.phi() <<" "<< nTemp << endl;
               TLorentzVector P4;
-              P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());                                                                                                      
+              P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());
               bool isIn = false;
               for(const auto &v : hltVecs)
-                  if(v == P4) {isIn = true; break;}
-              if(!isIn) hltVecs.push_back(P4);
+		if(v == P4) {isIn = true; break;}
+              if(!isIn){
+		hltVecs.push_back(P4);
+	      }
           }
-
       }
       /*
       bool isOurTrigger = false;
@@ -366,7 +353,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       //for(unsigned j=0; j<pathNamesLast.size();j++) cout<<"last\t"<<pathNamesLast[j]<<endl;
 
       */
-      ++nTriggerObjects_;
+      //      ++nTriggerObjects_;
   }
   std::sort(hltVecs.begin(), hltVecs.end(), [](const TLorentzVector &v1, const TLorentzVector &v2) { return v1.Pt() > v2.Pt(); });
   for(const auto &v : hltVecs) {
@@ -374,15 +361,13 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     HLTeta_->push_back(v.Eta());
     HLTphi_->push_back(v.Phi());
     HLTmass_->push_back(v.M());
+    nTriggerObjects_++;
   }
 
-
+  /*
   for(const auto &v : hltVecs)
-      cout <<"HLT " <<  v.Pt() << " "<< v.Eta()  << " "<< v.Phi() << endl;
-
-  //cout<<"Number of HLT objects\t"<<nTriggerObjects_ <<endl;
-
-
+    cout <<"HLT " <<  v.Pt() << " "<< v.Eta()  << " "<< v.Phi() << endl;
+  */
 
   //----- at least one good vertex -----------
   bool cut_vtx = (recVtxs->size() > 0);
@@ -430,6 +415,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
           mass_          ->push_back(ijet->mass());
           energy_        ->push_back(ijet->energy());
 
+	  float btag = ijet->bDiscriminator(srcBtag_.c_str());
+	  bool isBtag = (btag >=btagMin_);
+	  isBtag_       ->push_back(isBtag);
           mPFUncCHS->setJetEta(ijet->eta());
           mPFUncCHS->setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
           unc = mPFUncCHS->getUncertainty(true);
@@ -443,12 +431,12 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   run_    = iEvent.id().run();
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
-  metEt1_ = (*met1)[0].et();
-  metSumEt1_ = (*met1)[0].sumEt();
-  metEt2_ = (*met2)[0].et();
-  metSumEt2_ = (*met2)[0].sumEt();
-  metEt3_ = (*met3)[0].et();
-  metSumEt3_ =(*met3)[0].sumEt();
+  metEt_ = (*met1)[0].et();
+  metSumEt_ = (*met1)[0].sumEt();
+  metEtNoHF_ = (*met2)[0].et();
+  metSumEtNoHF_ = (*met2)[0].sumEt();
+  metEtPuppi_ = (*met3)[0].et();
+  metSumEtPuppi_ =(*met3)[0].sumEt();
 
   bool cut_RECO = (nJets_ >= 1);  
  
@@ -485,12 +473,12 @@ void BoostedTTbarFlatTreeProducer::initialize()
   nVtx_           = -1;
   nJets_          = -1;
   rho_            = -1;
-  metEt1_         = -1;
-  metEt2_         = -1;
-  metEt3_         = -1;
-  metSumEt1_      = -1;
-  metSumEt2_      = -1;
-  metSumEt3_      = -1;
+  metEt_          = -1;
+  metEtNoHF_      = -1;
+  metEtPuppi_     = -1;
+  metSumEt_       = -1;
+  metSumEtNoHF_   = -1;
+  metSumEtPuppi_  = -1;
   pvRho_          = -999;
   pvz_            = -999;
   pvndof_         = -999;
@@ -513,7 +501,7 @@ void BoostedTTbarFlatTreeProducer::initialize()
   phm_            ->clear();
   elm_            ->clear();
   mum_            ->clear();
-
+  isBtag_         ->clear();
   HLTeta_         ->clear();
   HLTphi_         ->clear();
   HLTpt_          ->clear();
