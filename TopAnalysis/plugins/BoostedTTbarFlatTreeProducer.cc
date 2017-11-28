@@ -417,6 +417,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
 	  float btag = ijet->bDiscriminator(srcBtag_.c_str());
 	  bool isBtag = (btag >=btagMin_);
+      //cout <<"Helenka " <<  srcBtag_ << " "<< btag << endl;
 	  isBtag_       ->push_back(isBtag);
           mPFUncCHS->setJetEta(ijet->eta());
           mPFUncCHS->setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
