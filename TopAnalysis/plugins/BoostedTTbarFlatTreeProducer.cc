@@ -215,6 +215,7 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup const& iSetup) 
 {
+
   initialize();
 
   //  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
@@ -386,7 +387,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   edm::ESHandle<JetCorrectorParametersCollection> PFJetCorParCollCHS;
   iSetup.get<JetCorrectionsRecord>().get("AK4PFchs",PFJetCorParCollCHS);
   JetCorrectorParameters const& PFJetCorParCHS = (*PFJetCorParCollCHS)["Uncertainty"];
-  mPFUncCHS = new JetCorrectionUncertainty(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
+  //mPFUncCHS = new JetCorrectionUncertainty(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
+  JetCorrectionUncertainty mPFUncCHS(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
 
   double unc=0.0;
   
@@ -419,9 +421,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 	  bool isBtag = (btag >=btagMin_);
       //cout <<"Helenka " <<  srcBtag_ << " "<< btag << endl;
 	  isBtag_       ->push_back(isBtag);
-          mPFUncCHS->setJetEta(ijet->eta());
-          mPFUncCHS->setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
-          unc = mPFUncCHS->getUncertainty(true);
+          mPFUncCHS.setJetEta(ijet->eta());
+          mPFUncCHS.setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
+          unc = mPFUncCHS.getUncertainty(true);
           unc_           ->push_back(unc);
           ht_ += ijet->pt();
           ++nJets_;
@@ -460,6 +462,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       outTree_->Fill();
     }
   }
+  //if(mPFUncCHS) delete mPFUncCHS;
 
 }
 
