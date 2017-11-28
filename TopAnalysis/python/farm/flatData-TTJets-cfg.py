@@ -13,6 +13,8 @@ options.register ('nFiles',
         VarParsing.VarParsing.varType.int,         # string, int, or float
         "n Files")
 
+
+
 options.parseArguments()
 
 file = open("/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/python/farm/runsG", "r")
@@ -23,11 +25,11 @@ lf = ff + options.nFiles
 curFiles =  runList[ff:lf]
 
 process = cms.Process('myprocess')
-process.TFileService=cms.Service("TFileService",fileName=cms.string('flatTreeFileData1-new.root'))
+process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 ##-------------------- Define the source  ----------------------------
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(3000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
         #"file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
@@ -43,7 +45,7 @@ process.source = cms.Source("PoolSource",
 )
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+process.MessageLogger.cerr.FwkReport.reportEvery = 100000
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
