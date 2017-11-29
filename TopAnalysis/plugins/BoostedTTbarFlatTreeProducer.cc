@@ -440,21 +440,25 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   run_    = iEvent.id().run();
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
+
   metEt_ = (*met1)[0].et();
   metSumEt_ = (*met1)[0].sumEt();
   metpt_ = (*met1)[0].pt();
   metphi_ = (*met1)[0].phi();
   metmass_ = (*met1)[0].mass();
+
   metEtNoHF_ = (*met2)[0].et();
   metSumEtNoHF_ = (*met2)[0].sumEt();
   metNoHFpt_ = (*met2)[0].pt();
   metNoHFphi_ = (*met2)[0].phi();
   metNoHFmass_ = (*met2)[0].mass();
+
   metEtPuppi_ = (*met3)[0].et();
   metSumEtPuppi_ =(*met3)[0].sumEt();
   metPuppipt_ = (*met3)[0].pt();
   metPuppiphi_ = (*met3)[0].phi();
   metPuppimass_ = (*met3)[0].mass();
+
   bool cut_RECO = (nJets_ >= 1);  
  
   cutFlowHisto_->Fill("All",1);
