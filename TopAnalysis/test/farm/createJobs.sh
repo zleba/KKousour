@@ -1,4 +1,4 @@
-ADDRESS=/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/python/farm
+ADDRESS=/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/test/farm
 DUST=/nfs/dust/cms/user/zlebcr/JEC/histos
 
 step=3
@@ -14,11 +14,14 @@ do
     echo "#$ -V" >> $subFile
     echo "#$ -e $ADDRESS/err/${name}.err" >> $subFile
     echo "#$ -o $ADDRESS/out/${name}.out" >> $subFile
+    echo "#$ -l h_vmem=2G" >> $subFile
 
-    echo 'cd $TMPDIR' >> $subFile
+    #echo 'cd $TMPDIR' >> $subFile
     echo 'pwd' >> $subFile
-    echo "cp $ADDRESS/flatData-TTJets-cfg.py ." >> $subFile
-    echo "cmsRun flatData-TTJets-cfg.py startFile=$i  nFiles=$step outputFile=$DUST/${name}.root" >> $subFile 
+    #echo "cp $ADDRESS/flatData-TTJets-cfg.py ." >> $subFile
+    echo "cmsRun $ADDRESS/flatData-TTJets-cfg.py startFile=$i  nFiles=$step outputFile=$DUST/${name}.root" >> $subFile 
     #echo "cp *.root $DUST/${name}.root" >> $subFile 
+
+    chmod u+x $subFile
 
 done

@@ -1,6 +1,11 @@
 import FWCore.ParameterSet.Config as cms 
 import FWCore.ParameterSet.VarParsing as VarParsing
 
+SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
+        ignoreTotal = cms.untracked.int32(1) )
+
+
+
 options = VarParsing.VarParsing ('analysis')
 options.register ('startFile',
         1, # default value
@@ -17,7 +22,8 @@ options.register ('nFiles',
 
 options.parseArguments()
 
-file = open("/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/python/farm/runsG", "r")
+file = open("/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/test/farm/runsG", "r")
+#runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
 runList = [r.rstrip() for r in file.readlines()]
 
 ff = options.startFile
@@ -30,6 +36,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+print "MaxEvents="+str(process.maxEvents)
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
         #"file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
@@ -45,7 +52,7 @@ process.source = cms.Source("PoolSource",
 )
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 100000
+process.MessageLogger.cerr.FwkReport.reportEvery = 20000
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
