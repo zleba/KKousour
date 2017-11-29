@@ -77,11 +77,19 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
   outTree_->Branch("metEt"                ,&metEt_             ,"metEt_/F");
   outTree_->Branch("metSumEt"             ,&metSumEt_          ,"metSumEt_/F");
+  outTree_->Branch("metpt_"               ,&metpt_             ,"metpt_/F");
+  outTree_->Branch("metphi_"              ,&metphi_            ,"metphi_/F");
+  outTree_->Branch("metmass_"             ,&metmass_           ,"metmass_/F");
   outTree_->Branch("metEtNoHF"            ,&metEtNoHF_         ,"metEtNoHF_/F");
   outTree_->Branch("metSumEtNoHF"         ,&metSumEtNoHF_      ,"metSumEtNoHF_/F");
+  outTree_->Branch("metNoHFpt_"           ,&metNoHFpt_         ,"metNoHFpt_/F");
+  outTree_->Branch("metNoHFphi_"          ,&metNoHFphi_        ,"metNoHFphi_/F");
+  outTree_->Branch("metNoHFmass_"         ,&metNoHFmass_       ,"metNoHFmass_/F");
   outTree_->Branch("metEtPuppi"           ,&metEtPuppi_        ,"metEtPuppi_/F");
   outTree_->Branch("metSumEtPuppi"        ,&metSumEtPuppi_     ,"metSumEtPuppi_/F");
- 
+  outTree_->Branch("metPuppipt_"          ,&metPuppipt_        ,"metPuppipt_/F");
+  outTree_->Branch("metPuppiphi_"         ,&metPuppiphi_       ,"metPuppiphi_/F");
+  outTree_->Branch("metPuppimass_"        ,&metPuppimass_      ,"metPuppimass_/F");
   //------------------------------------------------------------------
   flavor_         = new std::vector<int>;
   flavorHadron_   = new std::vector<int>;
@@ -434,11 +442,19 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   lumi_   = iEvent.id().luminosityBlock();
   metEt_ = (*met1)[0].et();
   metSumEt_ = (*met1)[0].sumEt();
+  metpt_ = (*met1)[0].pt();
+  metphi_ = (*met1)[0].phi();
+  metmass_ = (*met1)[0].mass();
   metEtNoHF_ = (*met2)[0].et();
   metSumEtNoHF_ = (*met2)[0].sumEt();
+  metNoHFpt_ = (*met2)[0].pt();
+  metNoHFphi_ = (*met2)[0].phi();
+  metNoHFmass_ = (*met2)[0].mass();
   metEtPuppi_ = (*met3)[0].et();
   metSumEtPuppi_ =(*met3)[0].sumEt();
-
+  metPuppipt_ = (*met3)[0].pt();
+  metPuppiphi_ = (*met3)[0].phi();
+  metPuppimass_ = (*met3)[0].mass();
   bool cut_RECO = (nJets_ >= 1);  
  
   cutFlowHisto_->Fill("All",1);
@@ -480,6 +496,15 @@ void BoostedTTbarFlatTreeProducer::initialize()
   metSumEt_       = -1;
   metSumEtNoHF_   = -1;
   metSumEtPuppi_  = -1;
+  metpt_          = -1;
+  metphi_         = -1;
+  metmass_        = -1;
+  metNoHFpt_      = -1;
+  metNoHFphi_     = -1;
+  metNoHFmass_    = -1;
+  metPuppipt_     = -1;
+  metPuppiphi_    = -1;
+  metPuppimass_   = -1;
   pvRho_          = -999;
   pvz_            = -999;
   pvndof_         = -999;
