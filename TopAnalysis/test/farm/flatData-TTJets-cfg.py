@@ -147,7 +147,7 @@ process.ak4 = process.ak8.clone(
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
 
-process.ak4PUPPI = process.ak8.clone(
+process.ak4PUPPI = process.ak4.clone(
     jets            = cms.InputTag('slimmedJetsPuppi'),
     genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
@@ -178,5 +178,6 @@ process.p = cms.Path(
 #   process.goodJets * 
 #   process.kinFitTtFullHadEvent * 
 #   process.ak8*process.ak4 * process.ak4PUPPI 
-   process.ak4
+   #process.ak4
+process.ak4PUPPI
 )

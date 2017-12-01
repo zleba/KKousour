@@ -8,7 +8,7 @@ rm sub/*.sub
 
 for i in `seq  1 $step $nFiles`
 do
-    name=jetCorr$i
+    name=jets$i
     subFile=sub/${name}.sub
     echo "#!/bin/bash" > $subFile
     echo "#$ -V" >> $subFile

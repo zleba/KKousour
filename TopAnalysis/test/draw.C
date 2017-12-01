@@ -13,8 +13,8 @@ void draw()
     TH1D *hAfter  = new TH1D("hAfter", "hAfter", 50, 30, 750);
 
     int i = 5;
-    tr->Draw("jetPt[0] >> hBefore", SF("triggerBit[%d]",i));
-    tr->Draw("jetPt[0] >> hAfter", SF("triggerBit[%d] && HLTjetPt[0] >= %d",i, lhtTrs[i+1]));
+    tr->Draw("jetPt[0] >> hBefore", SF("triggerBit[%d] && fabs(jetEta[0]) < 0.5",i));
+    tr->Draw("jetPt[0] >> hAfter", SF("triggerBit[%d] && HLTjetPt[0] >= %d && fabs(jetEta[0]) < 0.5",i, lhtTrs[i+1]));
 
     TCanvas *can = new TCanvas("can", "canvas");
 
@@ -30,5 +30,6 @@ void draw()
     hRatio->SetTitle(SF("(HLT_PFJet%d (emul) && HLT_PFJet%d)/HLT_PFJet%d",lhtTrs[i+1], lhtTrs[i], lhtTrs[i] ));
     hRatio->Divide (hAfter, hBefore, 1, 1, "B" );
     hRatio->Draw();
-    can->Print("test.pdf)");
+    hRatio->GetYaxis()->SetRangeUser(0.9, 1.03);
+    can->Print("testYcut.pdf)");
 }
