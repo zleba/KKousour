@@ -64,31 +64,31 @@ void BoostedTTbarFlatTreeProducer::beginJob()
  
   //--- book the tree ----------------------------------
   outTree_ = fs_->make<TTree>("events","events");
-  outTree_->Branch("runNo"                ,&run_               ,"run_/I");
-  outTree_->Branch("evtNo"                ,&evt_               ,"evt_/I");
-  outTree_->Branch("lumi"                 ,&lumi_              ,"lumi_/I");
-  outTree_->Branch("nvtx"                 ,&nVtx_              ,"nVtx_/I");
-  outTree_->Branch("nJets"                ,&nJets_             ,"nJets_/I");
-  outTree_->Branch("pvRho"                ,&pvRho_             ,"pvRho_/F");
-  outTree_->Branch("pvz"                  ,&pvz_               ,"pvz_/F");
-  outTree_->Branch("pvchi2"               ,&pvchi2_            ,"pvchi2_/F");
-  outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof_/F");
-  outTree_->Branch("rho"                  ,&rho_               ,"rho_/F");
-  outTree_->Branch("ht"                   ,&ht_                ,"ht_/F");
-  outTree_->Branch("metEt"                ,&metEt_             ,"metEt_/F");
-  outTree_->Branch("metSumEt"             ,&metSumEt_          ,"metSumEt_/F");
-  outTree_->Branch("metpt_"               ,&metpt_             ,"metpt_/F");
-  outTree_->Branch("metphi_"              ,&metphi_            ,"metphi_/F");
+  outTree_->Branch("runNo"                ,&run_               ,"runNo/I");
+  outTree_->Branch("evtNo"                ,&evt_               ,"evtNo/I");
+  outTree_->Branch("lumi"                 ,&lumi_              ,"lumi/I");
+  outTree_->Branch("nvtx"                 ,&nVtx_              ,"nvtx/I");
+  outTree_->Branch("nJets"                ,&nJets_             ,"nJets/I");
+  outTree_->Branch("pvRho"                ,&pvRho_             ,"pvRho/F");
+  outTree_->Branch("pvz"                  ,&pvz_               ,"pvz/F");
+  outTree_->Branch("pvchi2"               ,&pvchi2_            ,"pvchi2/F");
+  outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof/F");
+  outTree_->Branch("rho"                  ,&rho_               ,"rho/F");
+  outTree_->Branch("ht"                   ,&ht_                ,"ht/F");
+  outTree_->Branch("metEt"                ,&metEt_             ,"metEt/F");
+  outTree_->Branch("metSumEt"             ,&metSumEt_          ,"metSumEt/F");
+  outTree_->Branch("metpt"               ,&metpt_             ,"metpt/F");
+  outTree_->Branch("metphi"              ,&metphi_            ,"metphi/F");
   // outTree_->Branch("metmass_"             ,&metmass_           ,"metmass_/F");
-  outTree_->Branch("metEtNoHF"            ,&metEtNoHF_         ,"metEtNoHF_/F");
-  outTree_->Branch("metSumEtNoHF"         ,&metSumEtNoHF_      ,"metSumEtNoHF_/F");
-  outTree_->Branch("metNoHFpt_"           ,&metNoHFpt_         ,"metNoHFpt_/F");
-  outTree_->Branch("metNoHFphi_"          ,&metNoHFphi_        ,"metNoHFphi_/F");
+  outTree_->Branch("metEtNoHF"            ,&metEtNoHF_         ,"metEtNoHF/F");
+  outTree_->Branch("metSumEtNoHF"         ,&metSumEtNoHF_      ,"metSumEtNoHF/F");
+  outTree_->Branch("metNoHFpt"           ,&metNoHFpt_         ,"metNoHFpt/F");
+  outTree_->Branch("metNoHFphi"          ,&metNoHFphi_        ,"metNoHFphi/F");
   //  outTree_->Branch("metNoHFmass_"         ,&metNoHFmass_       ,"metNoHFmass_/F");
-  outTree_->Branch("metEtPuppi"           ,&metEtPuppi_        ,"metEtPuppi_/F");
-  outTree_->Branch("metSumEtPuppi"        ,&metSumEtPuppi_     ,"metSumEtPuppi_/F");
-  outTree_->Branch("metPuppipt_"          ,&metPuppipt_        ,"metPuppipt_/F");
-  outTree_->Branch("metPuppiphi_"         ,&metPuppiphi_       ,"metPuppiphi_/F");
+  outTree_->Branch("metEtPuppi"           ,&metEtPuppi_        ,"metEtPuppi/F");
+  outTree_->Branch("metSumEtPuppi"        ,&metSumEtPuppi_     ,"metSumEtPuppi/F");
+  outTree_->Branch("metPuppipt"          ,&metPuppipt_        ,"metPuppipt/F");
+  outTree_->Branch("metPuppiphi"         ,&metPuppiphi_       ,"metPuppiphi/F");
   //  outTree_->Branch("metPuppimass_"        ,&metPuppimass_      ,"metPuppimass_/F");
   //------------------------------------------------------------------
   flavor_         = new std::vector<int>;
@@ -148,7 +148,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("triggerBit"           ,"vector<bool>"      ,&triggerBit_);
   outTree_->Branch("triggerPre"           ,"vector<int>"       ,&triggerPre_);
 
-  outTree_->Branch("nTriggerObject", &nTriggerObjects_, "nTriggerObjects_/I");
+  outTree_->Branch("nTriggerObjects", &nTriggerObjects_, "nTriggerObjects/I");
 
   cout<<"Begin job finished"<<endl;
 }

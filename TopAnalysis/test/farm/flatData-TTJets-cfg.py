@@ -35,7 +35,7 @@ process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outp
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 ##-------------------- Define the source  ----------------------------
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(2000))
 print "MaxEvents="+str(process.maxEvents)
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
