@@ -30,7 +30,12 @@
 #include <TH1D.h>
 #include <TStyle.h>
 #include <TCanvas.h>
+#include <iostream>
+#include <strstream>
+#include <TString.h>
+#include <TFile.h>
 
+using namespace std;
 void jecFiller::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -47,16 +52,58 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
-
+   /*   
    vector<double> ptEdges = {18,21,24,28,32,37,43,49,56,64,74,84,97,114,133,153,174,196,220,245,272,300,330,362,395,430,468,507,548,592,638,686,737,790,846,905,967,1032,1101,1172,1248,1327,1410,1497,1588, 1684,1784,1890,2000,2116,2238,2366,2500, 2640,2787,2941,3103,3273,3450,3637,3832,4037,4252,4477,4713,4961,5220,5492,5777,6076,6389,6717,7000 };
 
    hJetPt  = new TH1D("hJetPt", "hist", ptEdges.size()-1, ptEdges.data());
    fOutput->Add(hJetPt);
+   */
+   double JetPt[10]={40.,60.,80.,140.,200.,260.,320.,400.,450.,500};
+   double JetPtThreshold[10]={60.,80.,140.,200.,260.,320.,400.,450.,500.,600.};
 
+   histoEmulated = new TH2D[10];
+   histoPtAll = new TH2D[10];
+   
+   stringstream TitEmulated, TitPtAll, TitCurrent;
+   TitEmulated.str("");
+   TitPtAll.str("");
+   TitCurrent.str("");
+   TitEmulated<<"Emulated";
+   TitPtAll<<"All";
+   
+   int NBins = 2800;
+   double PtMin = 0.;
+   double PtMax = 7000.;
+   int EtaBin = 50;
+   double EtaMin = 0.;
+   double EtaMax = 5.;
+
+   for(int i = 0; i<10; ++i){
+     TitCurrent.str("");
+     TitCurrent<<"HLTJetPt"<<JetPt[i+1]<<"_"<<TitEmulated.str();
+     histoEmulated[i].SetName(TitCurrent.str().c_str());
+     histoEmulated[i].SetTitle(TitCurrent.str().c_str());
+     histoEmulated[i].SetBins(NBins,PtMin, PtMax, EtaBin, EtaMin, EtaMax);
+     histoEmulated[i].SetDirectory(0);
+     histoEmulated[i].Sumw2();
+
+     TitCurrent.str("");
+     TitCurrent<<"HLTJetPt"<<JetPt[i]<<"_"<<TitPtAll.str();
+     histoPtAll[i].SetName(TitCurrent.str().c_str());
+     histoPtAll[i].SetTitle(TitCurrent.str().c_str());
+     histoPtAll[i].SetBins(NBins,PtMin,PtMax,EtaBin, EtaMin, EtaMax);
+     histoPtAll[i].SetDirectory(0);
+     histoPtAll[i].Sumw2();
+  
+     fOutput->Add(&histoEmulated[i]);
+     fOutput->Add(&histoPtAll[i]);
+   }
 }
+
 
 Bool_t jecFiller::Process(Long64_t entry)
 {
+  double JetPtThreshold[10]={60.,80.,140., 200., 260., 320., 400., 450., 500., 600.};
    // The Process() function is called for each entry in the tree (or possibly
    // keyed object in the case of PROOF) to be processed. The entry argument
    // specifies which entry in the currently loaded tree is to be processed.
@@ -74,18 +121,55 @@ Bool_t jecFiller::Process(Long64_t entry)
    // The return value is currently not used.
 
    fReader.SetEntry(entry);
+   
+   //for(unsigned i = 0; i < jetPt.GetSize(); ++i)
+   //    hJetPt->Fill(jetPt[i]);
+   
+   double leading_pT = 0.;
+   double leading_Eta = 0.;
+   double leading_Phi = 0.;
+   double deltaPhiMatch = 0.;
+   double hweight = 1.;
+   bool hltcut[10];
+   int etabin = 0.;
 
-   for(unsigned i = 0; i < jetPt.GetSize(); ++i)
-       hJetPt->Fill(jetPt[i]);
+   for(int triggerID = 0; triggerID < 10; ++triggerID){
+     for(int i = 0; i<10;++i)hltcut[i] = false;
+     if(triggerBit->at(triggerID)){
+       for(int i = 0; i < jetPt.GetSize(); ++i){
+	 if(i==0){
+	   leading_pT = jetPt[i];
+	   leading_Eta = jetEta[i];
+	   leading_Phi = jetPhi[i];
+	 }
+	 if(i>=1 && leading_pT < jetPt[i]){
+	   leading_pT = jetPt[i];
+	   leading_Eta = jetEta[i];
+	   leading_Phi = jetPhi[i];
+      	 }  
+       }//jetPt.GetSize()
+        
+       for(int hltiobj = 0; hltiobj < *nTriggerObjects ; ++hltiobj){
+	 deltaPhiMatch = HLTjetPhi[hltiobj]-leading_Phi;
+	 if(deltaPhiMatch < -TMath::Pi())deltaPhiMatch = deltaPhiMatch+2*TMath::Pi();
+	 if(deltaPhiMatch > +TMath::Pi())deltaPhiMatch = deltaPhiMatch-2*TMath::Pi();
+	 deltaPhiMatch = fabs(deltaPhiMatch);
+	 if(HLTjetPt[hltiobj] > JetPtThreshold[triggerID]){
+	   hltcut[triggerID] = true;
+	 }
+       }//hltiobj
 
-
-
+       histoPtAll[triggerID].Fill(leading_pT,fabs(leading_Eta),hweight);
+       if(hltcut[triggerID])histoEmulated[triggerID].Fill(leading_pT,fabs(leading_Eta),hweight);
+       }//triggerBin
+   }//triggerID
+   
    return kTRUE;
 }
 
 void jecFiller::SlaveTerminate()
 {
-   // The SlaveTerminate() function is called after all entries or objects
+  //SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
 
@@ -93,13 +177,23 @@ void jecFiller::SlaveTerminate()
 
 void jecFiller::Terminate()
 {
-    hJetPt  = dynamic_cast<TH1D*>(fOutput->FindObject("hJetPt"));
-    assert(hJetPt);
-    TCanvas *can = new TCanvas("can", "can");
-    hJetPt->Draw();
-    can->SaveAs("radek.pdf");
+  //    hJetPt  = dynamic_cast<TH1D*>(fOutput->FindObject("hJetPt"));
+  //  assert(hJetPt);
+  //  TCanvas *can = new TCanvas("can", "can");
+  //  hJetPt->Draw();
+  //  can->SaveAs("radek.pdf");
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
+    
+  TString outputFilename;
+  outputFilename = "Data2016test.root";
+  TFile* outputFile = new TFile(outputFilename,"recreate");
+  for(int i = 0; i < 10; ++i){
+    histoPtAll[i].Write();
+    histoEmulated[i].Write();
+  }
+  
+  outputFile->Close();
 
 }

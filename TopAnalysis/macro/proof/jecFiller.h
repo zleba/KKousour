@@ -19,7 +19,7 @@
 // Headers needed by this particular selector
 #include <vector>
 #include <TH1D.h>
-
+#include <TH2.h>
 
 
 class jecFiller : public TSelector {
@@ -78,6 +78,8 @@ public :
    TTreeReaderValue<Int_t> nTriggerObjects = {fReader, "nTriggerObjects"};
 
    TH1D *hJetPt;
+   TH2D *histoEmulated;
+   TH2D *histoPtAll;
 
    jecFiller(TTree * /*tree*/ =0) { }
    virtual ~jecFiller() { }
