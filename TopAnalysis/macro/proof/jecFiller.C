@@ -35,6 +35,11 @@
 #include <TString.h>
 #include <TFile.h>
 
+
+//static const vector<int> trigger_threshold{40,60,80,140,200,260,320,450,500};
+//static const size_t ntriggers = trigger_thresholds.size();
+//extern const vector<int> trigger_threshold;
+
 using namespace std;
 void jecFiller::Begin(TTree * /*tree*/)
 {
@@ -58,12 +63,26 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
    hJetPt  = new TH1D("hJetPt", "hist", ptEdges.size()-1, ptEdges.data());
    fOutput->Add(hJetPt);
    */
+   //vector<double> JetPt {40.,60.,80.,140.,200.,260.,320.,400.,450.,500};
    double JetPt[10]={40.,60.,80.,140.,200.,260.,320.,400.,450.,500};
    double JetPtThreshold[10]={60.,80.,140.,200.,260.,320.,400.,450.,500.,600.};
+
+   // assert(JetPt.size() == JetPtThreshold.size());
 
    histoEmulated = new TH2D[10];
    histoPtAll = new TH2D[10];
    
+#define SF TString::Format
+
+   //vector<TH2 *> histoPtAll(JetPt.size(),nullptr);
+   //for (size_t i = 0; i < histoPtAll.size(); ++i) 
+   //    histoPtAll[i] = new TH2D(SF("Jindrich%d", 42), "title", NBins, ...);
+
+   //for (TH2 * h: histoPtAll) {
+   //    const char * str = TString::Format("Jindrich%d", 42);
+   //    h = new TH2D(...);
+   //}
+
    stringstream TitEmulated, TitPtAll, TitCurrent;
    TitEmulated.str("");
    TitPtAll.str("");
@@ -86,6 +105,7 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
      histoEmulated[i].SetBins(NBins,PtMin, PtMax, EtaBin, EtaMin, EtaMax);
      histoEmulated[i].SetDirectory(0);
      histoEmulated[i].Sumw2();
+     // TH1::SetDefaultSumw2(kTRUE);
 
      TitCurrent.str("");
      TitCurrent<<"HLTJetPt"<<JetPt[i]<<"_"<<TitPtAll.str();
@@ -125,49 +145,45 @@ Bool_t jecFiller::Process(Long64_t entry)
    //for(unsigned i = 0; i < jetPt.GetSize(); ++i)
    //    hJetPt->Fill(jetPt[i]);
    
-   double leading_pT = 0.;
-   double leading_Eta = 0.;
-   double leading_Phi = 0.;
    double deltaPhiMatch = 0.;
    double hweight = 1.;
-   bool hltcut[10];
+   //bool hltcut[10];
    int etabin = 0.;
 
+
+   //vector<bool> hltcuts(ntriggers,false);
    for(int triggerID = 0; triggerID < 10; ++triggerID){
-     for(int i = 0; i<10;++i)hltcut[i] = false;
-     if(triggerBit->at(triggerID)){
-       for(int i = 0; i < jetPt.GetSize(); ++i){
-	 if(i==0){
-	   leading_pT = jetPt[i];
-	   leading_Eta = jetEta[i];
-	   leading_Phi = jetPhi[i];
-	 }
-	 if(i>=1 && leading_pT < jetPt[i]){
-	   leading_pT = jetPt[i];
-	   leading_Eta = jetEta[i];
-	   leading_Phi = jetPhi[i];
-      	 }  
-       }//jetPt.GetSize()
-        
+
+       //for(int i = 0; i<10;++i)hltcut[i] = false;
+       bool hltcut = false;
+
+       if(triggerBit->at(triggerID) == 0) continue;
+
+       size_t it = max_element(jetPt.begin(), jetPt.end()).fIndex;
+       double leading_pT = jetPt[it];
+       double leading_Eta = jetEta[it];
+       double leading_Phi = jetPhi[it];
+
        for(int hltiobj = 0; hltiobj < *nTriggerObjects ; ++hltiobj){
-	 deltaPhiMatch = HLTjetPhi[hltiobj]-leading_Phi;
-	 if(deltaPhiMatch < -TMath::Pi())deltaPhiMatch = deltaPhiMatch+2*TMath::Pi();
-	 if(deltaPhiMatch > +TMath::Pi())deltaPhiMatch = deltaPhiMatch-2*TMath::Pi();
-	 deltaPhiMatch = fabs(deltaPhiMatch);
-	 if(HLTjetPt[hltiobj] > JetPtThreshold[triggerID]){
-	   hltcut[triggerID] = true;
-	 }
+           deltaPhiMatch = abs(HLTjetPhi[hltiobj]-leading_Phi);
+           deltaPhiMatch = min(2*M_PI-deltaPhiMatch, deltaPhiMatch);
+
+
+           //deltaPhiMatch = HLTjetPhi[hltiobj]-leading_Phi;
+           //if(deltaPhiMatch < -TMath::Pi())deltaPhiMatch = deltaPhiMatch+2*TMath::Pi();
+           //if(deltaPhiMatch > +TMath::Pi())deltaPhiMatch = deltaPhiMatch-2*TMath::Pi();
+           //deltaPhiMatch = fabs(deltaPhiMatch);
+           hltcut =  hltcut || HLTjetPt[hltiobj] > JetPtThreshold[triggerID];
        }//hltiobj
 
        histoPtAll[triggerID].Fill(leading_pT,fabs(leading_Eta),hweight);
-       if(hltcut[triggerID])histoEmulated[triggerID].Fill(leading_pT,fabs(leading_Eta),hweight);
-       }//triggerBin
+       if(hltcut)histoEmulated[triggerID].Fill(leading_pT,fabs(leading_Eta),hweight);
    }//triggerID
    
    return kTRUE;
 }
 
-void jecFiller::SlaveTerminate()
+void jecFiller::SlaveTerminate ()
 {
   //SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
@@ -175,7 +191,7 @@ void jecFiller::SlaveTerminate()
 
 }
 
-void jecFiller::Terminate()
+void jecFiller::Terminate ()
 {
   //    hJetPt  = dynamic_cast<TH1D*>(fOutput->FindObject("hJetPt"));
   //  assert(hJetPt);

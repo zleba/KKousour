@@ -18,6 +18,7 @@
 
 // Headers needed by this particular selector
 #include <vector>
+#include <algorithm> 
 #include <TH1D.h>
 #include <TH2.h>
 
