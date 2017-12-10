@@ -36,9 +36,11 @@
 #include <TFile.h>
 #include <vector>
 
-static const vector<int> trigger_threshold{60,80,140,200,260,320,400,450,500,600};
-static const size_t ntriggers = trigger_threshold.size();
-static const vector<int> JetPt{40,60,80,140,200,260,320,400,450,500};
+#define SF TString::Format
+
+//static const vector<int> trigger_threshold{60,80,140,200,260,320,400,450,500,600};
+static const vector<int> trigTrh{40,60,80,140,200,260,320,400,450,500};
+//static const size_t ntriggers = JetPt.size();
 //extern const vector<int> trigger_threshold;
 
 using namespace std;
@@ -64,30 +66,33 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
    hJetPt  = new TH1D("hJetPt", "hist", ptEdges.size()-1, ptEdges.data());
    fOutput->Add(hJetPt);
    */
+   TH1::SetDefaultSumw2();
 
-   int NBins = 2800;
-   double PtMin = 0.;
-   double PtMax = 7000.;
-   int EtaBin = 50;
-   double EtaMin = 0.;
-   double EtaMax = 5.;
+   const int  nBinsPt  = 2800;
+   const double  PtMin = 0.;
+   const double  PtMax = 7000.;
+   const int  nBinsEta = 50;
+   const double EtaMin = 0.;
+   const double EtaMax = 5.;
 
-#define SF TString::Format
 
-   histoPtAll.resize(JetPt.size(),nullptr);
-   histoPtEmulated.resize(JetPt.size(),nullptr);
+   hPtAll.resize(trigTrh.size() - 1, nullptr);
+   hPtEmulated.resize(trigTrh.size() - 1, nullptr);
 
-   for (size_t i = 0; i < JetPt.size(); ++i){
-     histoPtAll.at(i) = new TH2D(SF("HLTJetPt%d_All", JetPt.at(i)), SF("HLTJetPt%d_All",JetPt.at(i)), NBins, PtMin, PtMax, EtaBin, EtaMin, EtaMax);
-     histoPtEmulated.at(i) = new TH2D(SF("HLTJetPt%d_Emulated", trigger_threshold.at(i)), SF("HLTJetPt%d_Emulated",trigger_threshold.at(i)),NBins, PtMin, PtMax, EtaBin, EtaMin, EtaMax);
+   for (size_t i = 0; i < hPtAll.size(); ++i){
+     int tr = trigTrh[i+1];
+     hPtAll[i]      = new TH2D(SF("HLTJetPt%d_All", tr), SF("HLTJetPt%d_All", tr),
+                                    nBinsPt, PtMin, PtMax, nBinsEta, EtaMin, EtaMax);
+     hPtEmulated[i] = new TH2D(SF("HLTJetPt%d_Emulated", tr), SF("HLTJetPt%d_Emulated", tr),
+                                    nBinsPt, PtMin, PtMax, nBinsEta, EtaMin, EtaMax);
 
-     fOutput->Add(histoPtAll.at(i));
-     fOutput->Add(histoPtEmulated.at(i));
+     fOutput->Add(hPtAll[i]);
+     fOutput->Add(hPtEmulated[i]);
    }
    
 
-   //fOutput->Add(histoPtEmulated);
-   //for (TH2 * h: histoPtAll) {
+   //fOutput->Add(hPtEmulated);
+   //for (TH2 * h: hPtAll) {
    //    const char * str = TString::Format("Jindrich%d", 42);
    //    h = new TH2D(...);
    //}
@@ -118,21 +123,24 @@ Bool_t jecFiller::Process(Long64_t entry)
    double deltaPhiMatch = 0.;
    double hweight = 1.;
    
-   for(int triggerID = 0; triggerID < ntriggers-1; ++triggerID){
-     bool hltcut = false;
+   for(int triggerID = 0; triggerID < hPtAll.size(); ++triggerID) {
      if(triggerBit->at(triggerID) == 0) continue;
      if(*nJets == 0) continue;
+
      size_t it = max_element(jetPt.begin(), jetPt.end()).fIndex;
      double leading_pT = jetPt[it];
      double leading_Eta = jetEta[it];
      double leading_Phi = jetPhi[it];
+
+     bool hltcut = false;
      for(int hltiobj = 0; hltiobj < *nTriggerObjects ; ++hltiobj){
        deltaPhiMatch = fabs(HLTjetPhi[hltiobj]-leading_Phi);
        deltaPhiMatch = min(2*M_PI-deltaPhiMatch, deltaPhiMatch);
-       hltcut =  hltcut || HLTjetPt[hltiobj] > trigger_threshold[triggerID];
+       hltcut =  hltcut || HLTjetPt[hltiobj] > trigTrh[triggerID+1];
      }//hltiobj
-     histoPtAll.at(triggerID)->Fill(leading_pT,fabs(leading_Eta),hweight);
-     if(hltcut)histoPtEmulated.at(triggerID)->Fill(leading_pT,fabs(leading_Eta),hweight);
+
+     hPtAll[triggerID]->Fill(leading_pT, abs(leading_Eta), hweight);
+     if(hltcut) hPtEmulated[triggerID]->Fill(leading_pT, abs(leading_Eta), hweight);
    }//triggerID
    
    return kTRUE;
@@ -140,41 +148,42 @@ Bool_t jecFiller::Process(Long64_t entry)
 
 void jecFiller::SlaveTerminate ()
 {
-  //SlaveTerminate() function is called after all entries or objects
-   // have been processed. When running with PROOF SlaveTerminate() is called
-   // on each slave server.
+    //SlaveTerminate() function is called after all entries or objects
+    // have been processed. When running with PROOF SlaveTerminate() is called
+    // on each slave server.
 
 }
 
 void jecFiller::Terminate ()
 {
-  //    hJetPt  = dynamic_cast<TH1D*>(fOutput->FindObject("hJetPt"));
-  //  assert(hJetPt);
-  //  TCanvas *can = new TCanvas("can", "can");
-  //  hJetPt->Draw();
-  //  can->SaveAs("radek.pdf");
-   // The Terminate() function is the last function to be called during
-   // a query. It always runs on the client, it can be used to present
-   // the results graphically or save the results to file.
+    //    hJetPt  = dynamic_cast<TH1D*>(fOutput->FindObject("hJetPt"));
+    //  assert(hJetPt);
+    //  TCanvas *can = new TCanvas("can", "can");
+    //  hJetPt->Draw();
+    //  can->SaveAs("radek.pdf");
+    // The Terminate() function is the last function to be called during
+    // a query. It always runs on the client, it can be used to present
+    // the results graphically or save the results to file.
 
-#define SF TString::Format
 
-  vector<TH2 *> histoPtAll(ntriggers,nullptr);
-  vector<TH2 *> histoPtEmulated(ntriggers,nullptr);
+    hPtAll.resize(trigTrh.size()-1, nullptr);
+    hPtEmulated.resize(trigTrh.size()-1, nullptr);
 
-  for(size_t i = 0; i < ntriggers; ++i){
-    histoPtAll.at(i) = dynamic_cast<TH2*>(fOutput->FindObject(SF("HLTJetPt%d_All",JetPt.at(i))));
-    histoPtEmulated.at(i) = dynamic_cast<TH2*>(fOutput->FindObject(SF("HLTJetPt%d_Emulated",trigger_threshold.at(i))));
-  }
-      
-  TString outputFilename;
-  outputFilename = "Data2016test.root";
-  TFile* outputFile = new TFile(outputFilename,"recreate");
-  for(size_t i = 0; i < 10; ++i){
-    histoPtAll.at(i)->Write();
-    histoPtEmulated.at(i)->Write();
-  }
-  
-  outputFile->Close();
-  
+    for(size_t i = 0; i < hPtAll.size(); ++i){
+        int tr = trigTrh[i+1];
+        hPtAll[i] = dynamic_cast<TH2*>(fOutput->FindObject(SF("HLTJetPt%d_All", tr)));
+        assert(hPtAll[i]);
+        hPtEmulated[i] = dynamic_cast<TH2*>(fOutput->FindObject(SF("HLTJetPt%d_Emulated", tr)));
+        assert(hPtEmulated[i]);
+    }
+
+    TString outputFilename = "Data2016test.root";
+
+    TFile* outputFile = new TFile(outputFilename,"recreate");
+    for(size_t i = 0; i < hPtAll.size(); ++i){
+        hPtAll[i]->Write();
+        hPtEmulated[i]->Write();
+    }
+
+
 }

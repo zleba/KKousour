@@ -78,9 +78,7 @@ public :
    TTreeReaderArray<int> triggerPre = {fReader, "triggerPre"};
    TTreeReaderValue<Int_t> nTriggerObjects = {fReader, "nTriggerObjects"};
 
-   TH1D *hJetPt;
-   vector<TH2 *> histoPtEmulated;
-   vector<TH2 *> histoPtAll;
+   vector<TH2 *> hPtAll, hPtEmulated;
  
    jecFiller(TTree * /*tree*/ =0) { }
    virtual ~jecFiller() { }
