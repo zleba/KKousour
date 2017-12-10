@@ -20,7 +20,7 @@
 #include <vector>
 #include <algorithm> 
 #include <TH1D.h>
-#include <TH2.h>
+#include <TH2D.h>
 
 
 class jecFiller : public TSelector {
@@ -79,9 +79,9 @@ public :
    TTreeReaderValue<Int_t> nTriggerObjects = {fReader, "nTriggerObjects"};
 
    TH1D *hJetPt;
-   TH2D *histoEmulated;
-   TH2D *histoPtAll;
-
+   vector<TH2 *> histoPtEmulated;
+   vector<TH2 *> histoPtAll;
+ 
    jecFiller(TTree * /*tree*/ =0) { }
    virtual ~jecFiller() { }
    virtual Int_t   Version() const { return 2; }
