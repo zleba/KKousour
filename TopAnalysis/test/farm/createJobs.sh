@@ -1,4 +1,4 @@
-ADDRESS=/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm
+ADDRESS=`pwd`
 listADDRESS=$ADDRESS/fileLists/Feb17
 DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuples
 

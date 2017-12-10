@@ -31,8 +31,8 @@ options.register ('nFiles',
 options.parseArguments()
 
 file = open(options.listFile, "r")
-runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
-#runList = [r.rstrip() for r in file.readlines()]
+#runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
+runList = [r.rstrip() for r in file.readlines()]
 
 ff = options.startFile
 lf = ff + options.nFiles
@@ -119,7 +119,7 @@ process.slMETsCHS.addGenMET = False
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 200
+process.MessageLogger.cerr.FwkReport.reportEvery = 50000
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
@@ -247,5 +247,5 @@ process.p = cms.Path(
 #   process.kinFitTtFullHadEvent * 
 #   process.ak8*process.ak4 * process.ak4PUPPI 
    #process.ak4
-process.ak4PUPPI
+  process.ak4 * process.ak4PUPPI
 )
