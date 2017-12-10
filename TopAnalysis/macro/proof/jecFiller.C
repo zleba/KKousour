@@ -77,6 +77,8 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
    //vector<TH2 *> histoPtAll(JetPt.size(),nullptr);
    //for (size_t i = 0; i < histoPtAll.size(); ++i) 
    //    histoPtAll[i] = new TH2D(SF("Jindrich%d", 42), "title", NBins, ...);
+   //    fOutput->Add(&histoPtAll[i])
+   //    fOutput->Add(&histoPtAll[i])
 
    //for (TH2 * h: histoPtAll) {
    //    const char * str = TString::Format("Jindrich%d", 42);
