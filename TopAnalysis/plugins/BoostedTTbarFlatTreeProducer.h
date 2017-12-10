@@ -68,6 +68,8 @@ struct Parameters {
     edm::EDGetTokenT<pat::METCollection> met1Token;
     edm::EDGetTokenT<pat::METCollection> met2Token;
     edm::EDGetTokenT<pat::METCollection> met3Token;
+    //edm::EDGetTokenT<pat::METCollection> metCHSToken;
+
     edm::EDGetTokenT<pat::PackedCandidateCollection> candsToken;
     edm::EDGetTokenT<double> rhoToken;
     edm::EDGetTokenT<reco::VertexCollection> recVtxsToken;
@@ -104,8 +106,9 @@ struct Parameters {
         //  muonsToken            = iC.consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
         //electronsToken        = iC.consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
         met1Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met1"));
-	met2Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met2"));
-	met3Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met3"));
+        met2Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met2"));
+        met3Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met3"));
+        //metCHSToken            = iC.consumes<pat::METCollection>(string("slimmedMETsCHS"));
         candsToken            = iC.consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
         rhoToken              = iC.consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
         recVtxsToken          = iC.consumes<reco::VertexCollection>(cfg.getParameter<edm::InputTag>("vertices"));
@@ -244,6 +247,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<pat::METCollection> met1;
     edm::Handle<pat::METCollection> met2;
     edm::Handle<pat::METCollection> met3;
+    //edm::Handle<pat::METCollection> metCHS;
     edm::Handle<pat::PackedCandidateCollection> cands;
     edm::Handle<double> rho;
     edm::Handle<reco::VertexCollection> recVtxs;

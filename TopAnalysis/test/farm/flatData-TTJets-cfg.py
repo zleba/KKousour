@@ -7,6 +7,14 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
 
 
 options = VarParsing.VarParsing ('analysis')
+
+options.register ('listFile',
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/test/farm/fileLists/runG.txt", # default value
+       # "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/test/farm/runsG", # default value
+        VarParsing.VarParsing.multiplicity.singleton, # singleton or list
+        VarParsing.VarParsing.varType.string,         # string, int, or float
+        "Name of file with list of files")
+
 options.register ('startFile',
         1, # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
@@ -22,9 +30,9 @@ options.register ('nFiles',
 
 options.parseArguments()
 
-file = open("/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_20/src/KKousour/TopAnalysis/test/farm/runsG", "r")
-#runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
-runList = [r.rstrip() for r in file.readlines()]
+file = open(options.listFile, "r")
+runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
+#runList = [r.rstrip() for r in file.readlines()]
 
 ff = options.startFile
 lf = ff + options.nFiles
@@ -50,9 +58,68 @@ process.source = cms.Source("PoolSource",
         #"file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
 #"root://cms-xrd-global.cern.ch//store/data/Run2017C/JetHT/MINIAOD/PromptReco-v1/000/299/368/00000/189F9B4C-876D-E711-9B34-02163E019BA4.root"),
 )
+
+############ MET for CHS
+def clean_met_(met):
+    del met.t01Variation
+    del met.t1Uncertainties
+    del met.t1SmearedVarsAndUncs
+    del met.tXYUncForRaw
+    del met.tXYUncForT1
+    del met.tXYUncForT01
+    del met.tXYUncForT1Smear
+    del met.tXYUncForT01Smear
+
+
+
+
+from PhysicsTools.PatAlgos.tools.metTools import addMETCollection
+
+## Raw PF METs
+process.load('RecoMET.METProducers.PFMET_cfi')
+
+process.pfMet.src = cms.InputTag('packedPFCandidates')
+addMETCollection(process, labelName='patPFMet', metSource='pfMet') # RAW MET
+process.patPFMet.addGenMET = False
+
+process.pfMetCHS = process.pfMet.clone()
+process.pfMetCHS.src = cms.InputTag("chs")
+process.pfMetCHS.alias = cms.string('pfMetCHS')
+addMETCollection(process, labelName='patPFMetCHS', metSource='pfMetCHS') # RAW CHS MET
+process.patPFMetCHS.addGenMET = False
+
+
+from PhysicsTools.PatAlgos.slimming.slimmedMETs_cfi import slimmedMETs
+#### CaloMET is not available in MiniAOD
+del slimmedMETs.caloMET
+
+### CHS
+process.slimmedMETsCHS = slimmedMETs.clone()
+if hasattr(process, "patPFMetCHS"):
+    # Create MET from Type 1 PF collection
+    process.patPFMetCHS.addGenMET = False
+    process.slimmedMETsCHS.src = cms.InputTag("patPFMetCHS")
+    process.slimmedMETsCHS.rawUncertainties = cms.InputTag("patPFMetCHS") # only central value
+else:
+    # Create MET from RAW PF collection
+    process.patPFMetCHS.addGenMET = False
+    process.slimmedMETsCHS.src = cms.InputTag("patPFMetCHS")
+    del process.slimmedMETsCHS.rawUncertainties # not available
+
+clean_met_(process.slimmedMETsCHS)
+addMETCollection(process, labelName="slMETsCHS", metSource="slimmedMETsCHS")
+process.slMETsCHS.addGenMET = False
+
+
+
+
+
+
+
+
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 20000
+process.MessageLogger.cerr.FwkReport.reportEvery = 200
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
@@ -142,7 +209,8 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
 
 process.ak4 = process.ak8.clone(
     jets            = cms.InputTag('slimmedJets'),
-    triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v'),
+    triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v',
+        'HLT_DiPFJetAve40_v', 'HLT_DiPFJetAve60_v', 'HLT_DiPFJetAve80_v', 'HLT_DiPFJetAve140_v', 'HLT_DiPFJetAve200_v', 'HLT_DiPFJetAve260_v', 'HLT_DiPFJetAve320_v', 'HLT_DiPFJetAve400_v', 'HLT_DiPFJetAve500_v',),
     genjets         = cms.untracked.InputTag('slimmedGenJets'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )

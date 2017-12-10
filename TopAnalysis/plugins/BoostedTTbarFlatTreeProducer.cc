@@ -244,6 +244,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   iEvent.getByToken(p.met1Token,met1);
   iEvent.getByToken(p.met2Token,met2);
   iEvent.getByToken(p.met3Token,met3);
+  //iEvent.getByToken(p.metCHSToken,metCHS);
 
   triggerBit_->clear();
   triggerPre_->clear();
@@ -462,6 +463,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   metSumEtPuppi_ =(*met3)[0].sumEt();
   metPuppipt_ = (*met3)[0].pt();
   metPuppiphi_ = (*met3)[0].phi();
+
+  //cout << metCHS->size()<< "  " << metEt_ << " "<< (*metCHS)[0].et() <<  endl;
+
   //metPuppimass_ = (*met3)[0].mass();
 
   bool cut_RECO = (nJets_ >= 1);  

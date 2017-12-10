@@ -1,0 +1,5 @@
+for file in *.py
+do 
+    grep -o "/store[^']*" $file > ${file}.txt
+done
+rename py.txt txt *.txt
