@@ -5,41 +5,12 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
         ignoreTotal = cms.untracked.int32(1) )
 
 
-
 options = VarParsing.VarParsing ('analysis')
 
-options.register ('listFile',
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Feb17/runD.txt", # default value
-       # "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/runsG", # default value
-        VarParsing.VarParsing.multiplicity.singleton, # singleton or list
-        VarParsing.VarParsing.varType.string,         # string, int, or float
-        "Name of file with list of files")
-
-options.register ('startFile',
-        1, # default value
-        VarParsing.VarParsing.multiplicity.singleton, # singleton or list
-        VarParsing.VarParsing.varType.int,         # string, int, or float
-        "Starting file")
-options.register ('nFiles',
-        1, # default value
-        VarParsing.VarParsing.multiplicity.singleton, # singleton or list
-        VarParsing.VarParsing.varType.int,         # string, int, or float
-        "n Files")
-
-
-
-options.parseArguments()
-
-file = open(options.listFile, "r")
-runList = ["root://cms-xrd-global.cern.ch/"+r.rstrip() for r in file.readlines()]
-#runList = [r.rstrip() for r in file.readlines()]
-
-ff = options.startFile
-lf = ff + options.nFiles
-curFiles =  runList[ff:lf]
 
 process = cms.Process('myprocess')
-process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
+#process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
+process.TFileService=cms.Service("TFileService",fileName=cms.string('flatTreeFileData1-new.root'))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 ##-------------------- Define the source  ----------------------------
@@ -52,9 +23,9 @@ process.source = cms.Source("PoolSource",
   #'root://cms-xrd-global.cern.ch//store/data/Run2017C/JetHT/MINIAOD/PromptReco-v1/000/299/368/00000/189F9B4C-876D-E711-9B34-02163E019BA4.root'),
   #"/store/data/Run2016B/JetHT/MINIAOD/PromptReco-v1/000/273/017/00000/8CDA052B-BC19-E611-9CC4-02163E014298.root"),
 
-  #"root://cms-xrd-global.cern.ch//store/data/Run2016H/JetHT/MINIAOD/07Aug17-v1/110001/F86FCA70-5E7E-E711-9258-0CC47A4C8EEA.root"),
+  "root://cms-xrd-global.cern.ch//store/data/Run2016H/JetHT/MINIAOD/07Aug17-v1/110001/F86FCA70-5E7E-E711-9258-0CC47A4C8EEA.root",
   #"/store/data/Run2016G/JetHT/MINIAOD/23Sep2016-v1/100000/0085E379-F887-E611-AF46-047D7B881D72.root"),
-    curFiles),
+    ),
         #"file:/nfs/dust/cms/user/zlebcr/D2102E03-E415-E611-A4AD-02163E01395E.root"),
 #"root://cms-xrd-global.cern.ch//store/data/Run2017C/JetHT/MINIAOD/PromptReco-v1/000/299/368/00000/189F9B4C-876D-E711-9B34-02163E019BA4.root"),
 )
@@ -119,7 +90,7 @@ process.slMETsCHS.addGenMET = False
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 200
+process.MessageLogger.cerr.FwkReport.reportEvery = 200000
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
