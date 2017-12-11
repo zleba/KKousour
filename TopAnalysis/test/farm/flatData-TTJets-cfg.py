@@ -41,7 +41,9 @@ curFiles =  runList[ff:lf]
 process = cms.Process('myprocess')
 process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
+#process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
+process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v16'
+#process.GlobalTag.globaltag = '80X_dataRun2_2016SeptRepro_v5' UUH choice
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 print "MaxEvents="+str(process.maxEvents)

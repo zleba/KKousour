@@ -1,6 +1,6 @@
 ADDRESS=`pwd`
 listADDRESS=$ADDRESS/fileLists/Feb17
-DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuples
+DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuples2
 
 step=6
 
