@@ -2,8 +2,6 @@
 <use   name="root"/> 
 <use   name="rootrflx"/>
 <use   name="rootcore"/>
-<use   name="roottmva"/>
-<use   name="rootmath"/>
 <use   name="RecoMET/METAlgorithms"/>
 <use   name="JetMETCorrections/Algorithms"/>
 <use   name="JetMETCorrections/Modules"/>
@@ -23,13 +21,10 @@
 <use   name="FWCore/Framework"/>
 <use   name="FWCore/PluginManager"/>
 <use   name="FWCore/ServiceRegistry"/>
-<use   name="clhep"/>
 <use   name="HLTrigger/HLTcore"/>
 <use   name="L1Trigger/GlobalTriggerAnalyzer"/>
 <use   name="CondFormats/L1TObjects"/>
 <use   name="CondFormats/DataRecord"/>
 <use   name="CondFormats/JetMETObjects"/>
-<use   name="fastjet"/>
-<use   name="lhapdf"/>
 <flags CXXFLAGS="-g -O0 -DDEBUG " EDM_PLUGIN="1"/>
 </library>

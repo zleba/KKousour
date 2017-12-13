@@ -9,7 +9,8 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
 options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Feb17/runD.txt", # default value
+        #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Feb17/runD.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runE.txt", # default value
        # "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/runsG", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float
@@ -121,7 +122,7 @@ process.slMETsCHS.addGenMET = False
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 50000
+process.MessageLogger.cerr.FwkReport.reportEvery = 500
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')

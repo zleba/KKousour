@@ -3,14 +3,16 @@
 #include <functional>
 #include <vector>
 #include <cassert>
-#include "Math/SpecFuncMathMore.h"
+//#include "Math/SpecFuncMathMore.h"
 #include "TMath.h"
-#include "TVectorD.h"
-#include "TMatrixDSym.h"
-#include "TMatrixDSymEigen.h"
-#include "fastjet/contrib/Njettiness.hh"
-#include "fastjet/tools/MassDropTagger.hh"
-#include "fastjet/contrib/SoftDrop.hh"
+//#include "TVectorD.h"
+//#include "TMatrixDSym.h"
+//#include "TMatrixDSymEigen.h"
+
+//#include "fastjet/contrib/Njettiness.hh"
+//#include "fastjet/tools/MassDropTagger.hh"
+//#include "fastjet/contrib/SoftDrop.hh"
+
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
@@ -23,6 +25,7 @@
 #include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
+
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -30,10 +33,6 @@
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerResultsByName.h"
 
-#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
-#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
-#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
@@ -41,7 +40,7 @@
 
 using namespace std;
 using namespace reco;
-using namespace fastjet;
+//using namespace fastjet;
 
 BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet const& cfg) : p(cfg, consumesCollector())
 { }
