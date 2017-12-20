@@ -11,6 +11,8 @@
 #include "TProfile2D.h"
 #include "TCanvas.h"
 #include "TStyle.h"
+#include <map>
+#include <vector>
 
 #define SF TString::Format
 
@@ -18,6 +20,116 @@
 R__LOAD_LIBRARY(/afs/desy.de/user/c/connorpa/Libraries/PlottingHelper/libPlottingHelper.so)
 
 using namespace PlottingHelper;
+
+
+
+
+class Luminosity {
+    vector<map<int, double>> lumiMap;
+
+
+    public:
+
+    static map<int,double> GetLumis(TString fName)
+    {
+        ifstream file(fName);
+        assert(file.good());
+        
+        map<int,double> lumiMap;
+        while(1) {
+            TString trigName;
+            double lum;
+            file >> trigName >> lum;
+            if(!file.good()) break;
+            trigName.ReplaceAll("HLT_PFJet", "");
+            trigName = trigName(0, trigName.Length()-3);
+
+            int trigTr = trigName.Atoi();
+            if(trigTr != 500) {
+                lumiMap[trigTr] += lum;
+            }
+        }
+        file.close();
+        return lumiMap;
+
+    }
+
+    void LoadLumis() {
+        vector<vector<TString>> files;
+        files.push_back({"processedLumis2016B.json.txt"});
+        files.push_back({"processedLumis2016C.json.txt"});
+        files.push_back({"processedLumis2016D.json.txt"});
+        files.push_back({"processedLumis2016E.json.txt"});
+        files.push_back({"processedLumis2016Fearly.json.txt", "processedLumis2016Flate.json.txt" });
+        files.push_back({"processedLumis2016G.json.txt"});
+        files.push_back({"processedLumis2016H.json.txt"});
+
+        lumiMap.resize(files.size() + 1);
+
+        TString path = "/nfs/dust/cms/user/connorpa/SMPJ/effective_luminosity_Run2016BtoH/";
+
+        //Read luminosities to map
+        for(int i = 0; i < files.size(); ++i) {
+            for(int j = 0; j < files[i].size(); ++j) {
+                auto lum = GetLumis(path + files[i][j]);
+                for(auto v : lum) {
+                    lumiMap[i+1][v.first] += v.second;
+                    //cout << "Printout " << v.first <<" "<< v.second << endl;
+                }
+            }
+        }
+
+        //Evaluate the total luminosity
+        for(int i = 1; i < lumiMap.size(); ++i)
+            for(auto v : lumiMap[i])
+                lumiMap[0][v.first] += v.second;
+
+        //Assert identical trigger configuration:
+        for(int i = 1; i < lumiMap.size(); ++i) {
+            assert(lumiMap[0].size() == lumiMap[i].size());
+        }
+
+
+        for(auto v : lumiMap[0]) {
+            cout << v.first <<" "<< v.second << endl;
+        }
+
+
+    }
+
+    pair<double,int> GetWeightID(int periodId, double pT0)
+    {
+        //Trigger tresholds
+        static const map<int,int> trigTrsh = {
+            {40 , 74},
+            {60 , 84},
+            {80 , 114},
+            {140 , 196},
+            {200 , 245},
+            {260 , 330},
+            {320 , 395},
+            {400 , 468},
+            {450 , 507},
+        };
+
+        assert(periodId < lumiMap.size());
+        int id = trigTrsh.size() - 1;
+        for(auto it = trigTrsh.rbegin(); it != trigTrsh.rend(); ++it, --id) 
+            if(pT0 >= it->second) {
+                return make_pair(1. / lumiMap[periodId].at(it->first), id);
+            }
+
+        return make_pair(0., -1);
+
+    }
+
+};
+
+
+
+
+
+
 
 double dist2(double eta1, double phi1, double eta2, double phi2)
 {
@@ -45,6 +157,7 @@ void match()
     TTreeReader chsTree("ak4/events", f);
     TTreeReader puppiTree("ak4PUPPI/events", f);
 
+
     TTreeReaderArray<float> CHSjetPt = {chsTree, "jetPt"};
     TTreeReaderArray<float> CHSjetEta = {chsTree, "jetEta"};
     TTreeReaderArray<float> CHSjetPhi = {chsTree, "jetPhi"};
@@ -58,6 +171,14 @@ void match()
     TH1::SetDefaultSumw2();
 
     TH3D *hBalEtaPt = new TH3D("hBalEtaPt", "hBalEtaPt", 5, 0., 4.7, 5, 50., 500., 60, 0.8, 1.2);
+    TH1D *hJetPt = new TH1D("hJetPt", "hJetPt", 40, 30, 700);
+
+
+
+    auto Lumis =  Luminosity::GetLumis("/nfs/dust/cms/user/connorpa/SMPJ/effective_luminosity_Run2016BtoH/processedLumis2016B.json.txt");
+
+    Luminosity lum;
+    lum.LoadLumis();
 
 
     const double jetSel = 50;
@@ -66,12 +187,30 @@ void match()
     while(chsTree.Next() && puppiTree.Next()) {
         ++iEv;
 
+        if(CHSjetPt.GetSize() < 1 || PUPPIjetPt.GetSize() < 1) continue;
+        TString fileName = ((TChain*) chsTree.GetTree())->GetCurrentFile()->GetName();
+        int fileId = fileName[fileName.Length()-6] -'A';
+
+        double wgt;
+        int id;
+        tie(wgt,id) = lum.GetWeightID(fileId, CHSjetPt[0]);
+        if(wgt == 0 || id < 0)  continue;
+
+        //cout << "Info " << CHSjetPt[0]<<" "<< id <<" "<< (*CHStriggerBit).at(id) << endl;
+        if((*CHStriggerBit).at(id) != 1) continue;
+
+
+        hJetPt->Fill(CHSjetPt[0], wgt);
+
+
+        /*
         //Trigger 120
         if((*CHStriggerBit).at(3)) continue;
 
         if(CHSjetPt.GetSize() == 0 || PUPPIjetPt.GetSize() == 0)
             continue;
         if(CHSjetPt[0] < 160) continue;
+        */
 
 
         for(int i = 0; i < PUPPIjetPt.GetSize(); ++i) {
@@ -89,7 +228,7 @@ void match()
             if(m != -1) {
                 //cout << "match " << PUPPIjetPt[i] << " "<< PUPPIjetPt[i] / CHSjetPt[m] << endl;
                 double r = PUPPIjetPt[i] / CHSjetPt[m];
-                hBalEtaPt->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], r);
+                hBalEtaPt->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], r, wgt);
             }
             //else
                 //hBalEtaPt->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], 1.199);
@@ -115,7 +254,7 @@ void match()
 
 
         if(iEv % 10000 == 0 ) cout << iEv << endl;
-        if(iEv > 5e4) break;
+        if(iEv > 5e6) break;
         //if(CHSjetPt.GetSize() > 0 && PUPPIjetPt.GetSize() > 0)
             //cout <<iEv<<" "<< CHSjetPt[0] << " "<< PUPPIjetPt[0]  << endl;
 
@@ -215,6 +354,7 @@ void match()
 
     hSigma->Draw("text");
 
+    hJetPt->Draw();
     can->Print("res.pdf)");
 
 
@@ -223,13 +363,4 @@ void match()
 }
 
 
-double GetWeight()
-{
 
-
-
-
-
-
-
-}
