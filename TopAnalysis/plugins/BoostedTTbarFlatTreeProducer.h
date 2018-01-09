@@ -49,6 +49,10 @@
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfo.h"//add
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfoMatching.h"//add
 
+#include "JEC.h"
+
+
+#include <sstream>
 /*
 #include "fastjet/ClusterSequenceArea.hh"
 #include "fastjet/tools/Filter.hh"
@@ -98,17 +102,24 @@ struct Parameters {
     bool debug_ ;
     double GenptMin_;
     double GenetaMax_;
+    string curFile_;
+    string jetType_;
 
     edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
     Parameters(edm::ParameterSet const& cfg,  edm::ConsumesCollector && iC) {
         jetsToken             = iC.consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
+
+        stringstream temp; temp << cfg.getParameter<edm::InputTag>("jets");
+        jetType_ = temp.str();
+
         genjetsToken          = iC.consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
         //  muonsToken            = iC.consumes<pat::MuonCollection>(cfg.getParameter<edm::InputTag>("muons"));
         //electronsToken        = iC.consumes<pat::ElectronCollection>(cfg.getParameter<edm::InputTag>("electrons"));
         met1Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met1"));
         met2Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met2"));
         met3Token              = iC.consumes<pat::METCollection>(cfg.getParameter<edm::InputTag>("met3"));
+
         //metCHSToken            = iC.consumes<pat::METCollection>(string("slimmedMETsCHS"));
         candsToken            = iC.consumes<pat::PackedCandidateCollection>(cfg.getParameter<edm::InputTag>("candidates"));
         rhoToken              = iC.consumes<double>(cfg.getParameter<edm::InputTag>("rho"));
@@ -139,6 +150,10 @@ struct Parameters {
         debug_                = cfg.getUntrackedParameter<bool>("debug",false);
         GenptMin_             = cfg.getUntrackedParameter<double>("GenptMin");
         GenetaMax_            = cfg.getUntrackedParameter<double>("GenetaMax");
+
+        //cout <<"RADEK listFile " <<  cfg.getParameter<edm::InputTag>("listFile") << endl;
+        curFile_      =           cfg.getParameter<string>("fileNames");
+
 
         jetFlavourInfosToken_ = iC.consumes<reco::JetFlavourInfoMatchingCollection>( cfg.getParameter<edm::InputTag>("jetFlavourInfos"));
     }
@@ -198,7 +213,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- jet variables --------------
     std::vector<bool>  *isBtag_;
     std::vector<int>   *flavor_,*nSubJets_,*nSubGenJets_,*nBSubJets_,*flavorHadron_;
-    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*trigobjpt_, *trigobjeta_, *trigobjphi_;
+    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*trigobjpt_, *trigobjeta_, *trigobjphi_, *jetJECfact_;
     std::vector<int> *chm_, *nhm_, *phm_, *elm_, *mum_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
@@ -262,6 +277,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<LHERunInfoProduct> runInfo;
 
     JetCorrectionUncertainty *mPFUncCHS;
+    JECs jetEcorrs;
 
     //fastjet                                                                                                                                                                   
     //fastjet::Filter* fTrimmer1;

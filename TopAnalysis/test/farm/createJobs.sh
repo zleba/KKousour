@@ -1,8 +1,8 @@
 ADDRESS=`pwd`
-listADDRESS=$ADDRESS/fileLists/Feb17
-DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuples2
+listADDRESS=$ADDRESS/fileLists/Aug17
+DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuplesAugNew
 
-step=6
+step=12
 
 #rm sub/*.sub
 

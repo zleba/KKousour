@@ -46,6 +46,89 @@ BoostedTTbarFlatTreeProducer::BoostedTTbarFlatTreeProducer(edm::ParameterSet con
 { }
 
 
+struct QCDjet {
+    int flavor      ;
+    int flavorHadron;
+    float chf       ;
+    float nhf       ;
+    float phf       ;
+    float elf       ;
+    float muf       ;
+    int chm         ;
+    int nhm         ;
+    int phm         ;
+    int elm         ;
+    int mum         ;
+    float jetJECfact;
+
+    bool isBtag;
+    float  btag;
+    float unc;
+    TLorentzVector jet;
+    bool tightID;
+
+    QCDjet(const pat::Jet &ijet) {
+        flavor        =ijet.partonFlavour();
+        flavorHadron  =ijet.hadronFlavour();
+        chf           =ijet.chargedHadronEnergyFraction();
+        nhf           =ijet.neutralHadronEnergyFraction(); //NHF
+        phf           =ijet.photonEnergyFraction();
+        elf           =ijet.electronEnergyFraction();
+        muf           =ijet.muonEnergyFraction(); //MUF
+        chm           =ijet.chargedHadronMultiplicity();
+        nhm           =ijet.neutralHadronMultiplicity();
+        phm           =ijet.photonMultiplicity();
+        elm           =ijet.electronMultiplicity();
+        mum           =ijet.muonMultiplicity();
+
+
+        auto NHF  = nhf;
+        auto NEMF = ijet.neutralEmEnergyFraction();//NOTinc
+        auto CHF  = chf;
+        auto MUF  = muf;
+        auto CEMF = ijet.chargedEmEnergyFraction();
+        auto NumConst = ijet.chargedMultiplicity()+ijet.neutralMultiplicity();
+        auto NumNeutralParticles =ijet.neutralMultiplicity();
+        auto CHM      = ijet.chargedMultiplicity(); 
+
+        double eta = ijet.eta();
+
+        tightID = true;
+         if(abs(eta) <= 2.7)
+            tightID = (NHF<0.90 && NEMF<0.90 && NumConst>1) && ((abs(eta)<=2.4 && CHF>0 && CHM>0 && CEMF<0.99) || abs(eta)>2.4) && abs(eta)<=2.7;
+
+         else if(abs(eta) <= 3.0)
+            tightID = (NHF<0.98 && NEMF>0.01 && NumNeutralParticles>2 && abs(eta)>2.7 && abs(eta)<=3.0 );
+         else 
+            tightID = (NEMF<0.90 && NumNeutralParticles>10 && abs(eta)>3.0 );
+    }
+
+
+
+
+};
+
+/*
+vector<float> getArray(vector<QCDjet> &jets)
+{
+
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::beginJob() 
 {
@@ -60,6 +143,43 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 
   cutFlowHisto_ = fs_->make<TH1F>("CutFlow","CutFlow",1,0,1);
   cutFlowHisto_->SetCanExtend(TH1::kAllAxes);
+
+
+  //Init of JEC
+
+  const string sPatern = "data/Run2016";
+  size_t place = p.curFile_.find(sPatern);
+  assert(place != string::npos);
+  cout << p.curFile_ << endl;
+  char period = p.curFile_[place + sPatern.size()];
+
+
+  string globTag;
+  if('B' <= period  && period <= 'D')
+      globTag = "Summer16_07Aug2017BCD_V1";
+  else if('E' <= period  && period <= 'F')
+      globTag = "Summer16_07Aug2017EF_V1";
+  else if('G' == period)
+      globTag = "Summer16_07Aug2017G_V1";
+  else if('H' == period)
+      globTag = "Summer16_07Aug2017H_V1";
+  else {
+      assert(0);
+  }
+
+  string jetType = "AK4PFchs";
+  if(p.jetType_.find("Puppi") != string::npos) {
+      jetType = "AK4PFPuppi";
+      //cout << "Puppi found" << endl;
+      //exit(0);
+  }
+
+
+  vector<string> dumy;
+  //exit(0);
+
+  cout << "Jet type is :"  << jetType << endl;
+  jetEcorrs.Init(p.isMC_, globTag, jetType, "", dumy);
  
   //--- book the tree ----------------------------------
   outTree_ = fs_->make<TTree>("events","events");
@@ -110,6 +230,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   mum_            = new std::vector<int>;
   isBtag_         = new std::vector<bool>;
   btag_           = new std::vector<float>;
+  jetJECfact_     = new std::vector<float>;
 
   HLTpt_          = new std::vector<float>;
   HLTeta_         = new std::vector<float>;
@@ -135,6 +256,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("jetMum"               ,"vector<int>"       ,&mum_);
   outTree_->Branch("jetIsBtag"            ,"vector<bool>"      ,&isBtag_);
   outTree_->Branch("jetBtag"              ,"vector<float>"     ,&btag_);
+  outTree_->Branch("jetJEC"              ,"vector<float>"     ,&jetJECfact_);
   //------------------------------------------------------------------
   outTree_->Branch("HLTjetPt"             ,"vector<float>"     ,&HLTpt_);
   outTree_->Branch("HLTjetEta"            ,"vector<float>"     ,&HLTeta_);
@@ -157,6 +279,7 @@ void BoostedTTbarFlatTreeProducer::endJob()
   delete flavor_;
   delete isBtag_;
   delete btag_;
+  delete jetJECfact_;
   delete flavorHadron_;
   delete pt_;
   delete unc_;
@@ -402,6 +525,67 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   double unc=0.0;
   
+  vector<QCDjet> jetVec;
+  for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {
+      //if(ijet->pt() < 20) continue;
+      //if (isGoodJet(*ijet)) {
+      QCDjet jetNow(*ijet);
+
+      vector<string> dumy;
+      double CorFactor;
+      //cout << "PT before " << ijet->pt() << endl;
+      TLorentzVector jet = jetEcorrs.JEC_CHScorrections(p.isMC_, *ijet, *rho, dumy, CorFactor);
+      //cout << "PT after " << jet.Pt() << endl;
+      jetNow.jet = jet;
+
+
+      jetNow.isBtag = ijet->bDiscriminator(srcBtag_.c_str());
+      float btag = ijet->bDiscriminator(srcBtag_.c_str());
+      jetNow.btag = (btag >=btagMin_);
+
+      mPFUncCHS.setJetEta(ijet->eta());
+      mPFUncCHS.setJetPt(jet.Pt()); // here you must use the CORRECTED jet pt
+      jetNow.unc = mPFUncCHS.getUncertainty(true);
+      jetNow.jetJECfact = CorFactor;
+      jetVec.push_back(jetNow);
+  }
+  sort(jetVec.begin(), jetVec.end(), [](QCDjet &a, QCDjet &b){return  a.jet.Pt() > b.jet.Pt();});
+
+  int i = 0;
+  for(const auto &jetNow : jetVec) {
+      i++;
+     if(!jetNow.tightID) continue;
+     if(jetNow.jet.Pt() < 10) continue;
+
+    flavor_      ->push_back(jetNow.flavor);
+    flavorHadron_->push_back(jetNow.flavorHadron);
+    chf_         ->push_back(jetNow.chf);
+    nhf_         ->push_back(jetNow.nhf);
+    phf_         ->push_back(jetNow.phf);
+    elf_         ->push_back(jetNow.elf);
+    muf_         ->push_back(jetNow.muf);
+    chm_         ->push_back(jetNow.chm);
+    nhm_         ->push_back(jetNow.nhm);
+    phm_         ->push_back(jetNow.phm);
+    elm_         ->push_back(jetNow.elm);
+    mum_         ->push_back(jetNow.mum);
+
+    jetJECfact_  ->push_back(jetNow.jetJECfact);
+    isBtag_      ->push_back(jetNow.isBtag);
+    btag_        ->push_back(jetNow.btag);
+    unc_         ->push_back(jetNow.unc);
+
+    pt_          ->push_back(jetNow.jet.Pt());
+    phi_         ->push_back(jetNow.jet.Phi());
+    eta_         ->push_back(jetNow.jet.Eta());
+    mass_        ->push_back(jetNow.jet.M());
+    energy_      ->push_back(jetNow.jet.E());
+    ht_ += jetNow.jet.Pt();
+    //cout << i <<" "<<  jetNow.jet.Pt() << endl;
+  }
+  nJets_ = pt_->size();
+
+  /*
   if(jets->size() > 0)
       //cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {
@@ -421,25 +605,40 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
           elm_           ->push_back(ijet->electronMultiplicity());
           mum_           ->push_back(ijet->muonMultiplicity());
 
-          pt_            ->push_back(ijet->pt());
-          phi_           ->push_back(ijet->phi());
-          eta_           ->push_back(ijet->eta());
-          mass_          ->push_back(ijet->mass());
-          energy_        ->push_back(ijet->energy());
+          //double area = ijet->jetArea();
+          //double pfRho = *rho;
+          //cout << "Area " << area << " " << pfRho << endl;
+          vector<string> dumy;
+          double CorFactor;
+          //cout << "PT before " << ijet->pt() << endl;
+          TLorentzVector jet = jetEcorrs.JEC_CHScorrections(p.isMC_, *ijet, *rho, dumy, CorFactor );
+          //cout << "PT after " << jet.Pt() << endl;
 
-	  float btag = ijet->bDiscriminator(srcBtag_.c_str());
-	  bool isBtag = (btag >=btagMin_);
-	  //      cout <<"Btag " <<  srcBtag_ << " "<< btag << endl;
-	  isBtag_       ->push_back(isBtag);
-	  btag_         ->push_back(btag);
+          jetJECfact_     ->push_back(CorFactor);
+          pt_            ->push_back(jet.Pt());
+          phi_           ->push_back(jet.Phi());
+          eta_           ->push_back(jet.Eta());
+          mass_          ->push_back(jet.M());
+          energy_        ->push_back(jet.E());
+
+
+          float btag = ijet->bDiscriminator(srcBtag_.c_str());
+          bool isBtag = (btag >=btagMin_);
+          //      cout <<"Btag " <<  srcBtag_ << " "<< btag << endl;
+          isBtag_       ->push_back(isBtag);
+          btag_         ->push_back(btag);
           mPFUncCHS.setJetEta(ijet->eta());
-          mPFUncCHS.setJetPt(ijet->pt()); // here you must use the CORRECTED jet pt
+          mPFUncCHS.setJetPt(jet.Pt()); // here you must use the CORRECTED jet pt
           unc = mPFUncCHS.getUncertainty(true);
           unc_           ->push_back(unc);
-          ht_ += ijet->pt();
+          ht_ += jet.Pt();
           ++nJets_;
-      //}// if good jet
+          //}// if good jet
   }// jet loop       
+  */
+
+
+
   rho_    = *rho;
   nVtx_   = recVtxs->size();
   run_    = iEvent.id().run();

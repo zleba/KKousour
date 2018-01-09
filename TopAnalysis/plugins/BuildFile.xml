@@ -26,5 +26,5 @@
 <use   name="CondFormats/L1TObjects"/>
 <use   name="CondFormats/DataRecord"/>
 <use   name="CondFormats/JetMETObjects"/>
-<flags CXXFLAGS="-g -O0 -DDEBUG " EDM_PLUGIN="1"/>
+<flags CXXFLAGS="-g -O2 -DDEBUG " EDM_PLUGIN="1"/>
 </library>

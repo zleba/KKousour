@@ -10,7 +10,7 @@ options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
         #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Feb17/runD.txt", # default value
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runE.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runC.txt", # default value
        # "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/runsG", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float
@@ -43,7 +43,8 @@ process = cms.Process('myprocess')
 process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 #process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
-process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v16'
+#process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v16'
+process.GlobalTag.globaltag = '80X_dataRun2_2016LegacyRepro_v4'
 #process.GlobalTag.globaltag = '80X_dataRun2_2016SeptRepro_v5' UUH choice
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
@@ -122,7 +123,7 @@ process.slMETsCHS.addGenMET = False
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 500
+process.MessageLogger.cerr.FwkReport.reportEvery = 50000
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
@@ -191,6 +192,8 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   htMin            = cms.double(5),
   etaMax           = cms.double(5),
   kinfit           = cms.string('kinFitTtFullHadEvent'),
+  #listFile         = cms.string(options
+  fileNames  =       cms.string(curFiles[0]),
   btagMinThreshold = cms.double(0.814),
   btagMin          = cms.double(0.1),                     
   btagMaxThreshold = cms.double(1.1),
