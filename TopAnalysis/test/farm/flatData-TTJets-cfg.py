@@ -216,7 +216,8 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
 process.ak4 = process.ak8.clone(
     jets            = cms.InputTag('slimmedJets'),
     triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v',
-        'HLT_DiPFJetAve40_v', 'HLT_DiPFJetAve60_v', 'HLT_DiPFJetAve80_v', 'HLT_DiPFJetAve140_v', 'HLT_DiPFJetAve200_v', 'HLT_DiPFJetAve260_v', 'HLT_DiPFJetAve320_v', 'HLT_DiPFJetAve400_v', 'HLT_DiPFJetAve500_v',),
+        'HLT_DiPFJetAve40_v', 'HLT_DiPFJetAve60_v', 'HLT_DiPFJetAve80_v', 'HLT_DiPFJetAve140_v', 'HLT_DiPFJetAve200_v', 'HLT_DiPFJetAve260_v', 'HLT_DiPFJetAve320_v', 'HLT_DiPFJetAve400_v', 'HLT_DiPFJetAve500_v',
+       'HLT_DiPFJetAve60_HFJEC', 'HLT_DiPFJetAve80_HFJEC', 'HLT_DiPFJetAve100_HFJEC', 'HLT_DiPFJetAve160_HFJEC', 'HLT_DiPFJetAve220_HFJEC', 'HLT_DiPFJetAve300_HFJEC',),
     genjets         = cms.untracked.InputTag('slimmedGenJets'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )

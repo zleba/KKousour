@@ -395,27 +395,27 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   triggerPassHisto_->Fill("totalEvents",1);
   bool passTrigger(false);
   for(unsigned int k=0; k<p.triggerNames_.size(); ++k) {
-    bool bit(false);
-    int pre(1);
-    for(unsigned int itrig=0; itrig<triggerResults->size(); ++itrig) {
-      //cout<<"Trigger name of index "<<itrig<<" "<<string(names.triggerName(itrig))<<endl;
-      string trigger_name = string(names.triggerName(itrig));
-      //--- erase the last character, i.e. the version number----
-      trigger_name.pop_back();
-      if (trigger_name == p.triggerNames_[k]) {
-        bit = triggerResults->accept(itrig);
-        if(bit) trigNames.insert(trigger_name);
-        pre = triggerPrescales->getPrescaleForIndex(itrig);
-        if (bit) {
-          triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
-        } 
+      bool bit(false);
+      int pre(1);
+      for(unsigned int itrig=0; itrig<triggerResults->size(); ++itrig) {
+          //cout<<"Trigger name of index "<<itrig<<" "<<string(names.triggerName(itrig))<<endl;
+          string trigger_name = string(names.triggerName(itrig));
+          //--- erase the last character, i.e. the version number----
+          trigger_name.pop_back();
+          if (trigger_name == p.triggerNames_[k]) {
+              bit = triggerResults->accept(itrig);
+              if(bit) trigNames.insert(trigger_name);
+              pre = triggerPrescales->getPrescaleForIndex(itrig);
+              if (bit) {
+                  triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
+              } 
+          }
       }
-    }
-    //--- if at least one monitored trigger has fired passTrigger becomes true
-    passTrigger += bit;
-    triggerBit_->push_back(bit); 
-    triggerPre_->push_back(pre);
-    
+      //--- if at least one monitored trigger has fired passTrigger becomes true
+      passTrigger += bit;
+      triggerBit_->push_back(bit); 
+      triggerPre_->push_back(pre);
+
   }   
 
   //skip events without fired trigger
