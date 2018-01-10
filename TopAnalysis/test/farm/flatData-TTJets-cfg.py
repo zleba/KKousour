@@ -10,7 +10,7 @@ options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
         #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Feb17/runD.txt", # default value
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runC.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runG.txt", # default value
        # "/afs/desy.de/user/z/zlebcr/cms/CMSSW_8_0_29/src/KKousour/TopAnalysis/test/farm/runsG", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float

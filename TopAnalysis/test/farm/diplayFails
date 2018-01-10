@@ -1,6 +1,6 @@
 running=`qstat | awk '{print $3}' | grep -o "jets[^.]*"`
 
-address=/nfs/dust/cms/user/zlebcr/JEC/ntuples2
+address=/nfs/dust/cms/user/zlebcr/JEC/ntuplesAugNew
 #echo $running
 
 all=`ls sub/*.sub`

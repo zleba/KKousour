@@ -174,7 +174,6 @@ void BoostedTTbarFlatTreeProducer::beginJob()
       //exit(0);
   }
 
-
   vector<string> dumy;
   //exit(0);
 
@@ -347,6 +346,7 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup const& iSetup) 
 {
+  //cout <<"RADEKstart " <<  iEvent.id().event()<< endl;
 
   initialize();
 
@@ -417,6 +417,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
     triggerPre_->push_back(pre);
     
   }   
+
+  //skip events without fired trigger
+  if(!passTrigger) return;
 
   //exit(0);
   /*
@@ -585,6 +588,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   }
   nJets_ = pt_->size();
 
+  //cout <<"RADEKmiddle " <<  iEvent.id().event()<< endl;
+
   /*
   if(jets->size() > 0)
       //cout << "Number of Jets "<< jets->size() <<" "<< jets->begin()->pt() <<  endl;
@@ -670,7 +675,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
  
   cutFlowHisto_->Fill("All",1);
   if (iEvent.isRealData()) {
-     if(passTrigger) outTree_->Fill();
+     if(passTrigger) { outTree_->Fill();
+     //cout <<"RADEKend " <<  iEvent.id().event()<< endl;
+     }
     /*
     if (cut_RECO) {
       cutFlowHisto_->Fill("At least one jet",1);
@@ -722,6 +729,7 @@ void BoostedTTbarFlatTreeProducer::initialize()
   pvndof_         = -999;
   pvchi2_         = -999;
   btag_           ->clear();
+  jetJECfact_     ->clear();
   flavor_         ->clear();
   flavorHadron_   ->clear();
   pt_             ->clear();
