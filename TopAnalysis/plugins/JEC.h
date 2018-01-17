@@ -38,7 +38,7 @@ class JECs  {
     std::vector<string> mJECUncSrcNames;
 
 
-    virtual TLorentzVector JEC_CHScorrections(bool IsMCarlo, const pat::Jet &jetNow, double  pfRho, vector<string> jecUncSrcNames, double &CorFactor )
+    virtual TLorentzVector JEC_CHScorrections(bool IsMCarlo, const pat::Jet &jetNow, double  pfRho, vector<string> jecUncSrcNames, double &CorFactor, double &unc)
     {
 
         // ---- declaration of the vector of jets ---- //
@@ -99,6 +99,13 @@ class JECs  {
             } // if(!IsMCarlo)
 
 
+            auto getUnc =[&](double pt, double eta) {
+                mPFUnc->setJetEta(eta);
+                mPFUnc->setJetPt(pt);
+                return mPFUnc->getUncertainty(true);
+            };
+
+
             LorentzVector correctedJetP4; CorFactor = 0;
             if(!IsMCarlo) { // -- if data, then take the full L1FastL2RelativeL3AbsoluteL2L3Residual corrected jet - //
                 correctedJetP4 = LorentzVector(tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.Px(),
@@ -106,6 +113,7 @@ class JECs  {
                         tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.Pz(),
                         tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.E());
 
+                unc = getUnc(correctedJetP4.pt(), correctedJetP4.eta());
                 CorFactor = tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.E()/UnCorrectedJet.E();
                 return tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected;
             }
@@ -115,7 +123,7 @@ class JECs  {
                         tmpJetL1FastL2RelativeL3AbsoluteCorrected.Pz(),
                         tmpJetL1FastL2RelativeL3AbsoluteCorrected.E());
 
-
+                unc = getUnc(correctedJetP4.pt(), correctedJetP4.eta());
                 CorFactor = tmpJetL1FastL2RelativeL3AbsoluteCorrected.E()/UnCorrectedJet.E();
                 return tmpJetL1FastL2RelativeL3AbsoluteCorrected;
             }
@@ -129,15 +137,12 @@ class JECs  {
 
             //pfjetchs.setP4(correctedJetP4); // -- replacing the old P4 by newly corrected P4 -- //
 
-            /*
-            ///JEC Uncertainties
-            double unc(0.0);
-            vector<float> uncSrc(0);
-            mPFUnc->setJetEta(pfjetchs.eta());
-            mPFUnc->setJetPt(pfjetchs.pt());
-            unc = mPFUnc->getUncertainty(true);
 
+            ///JEC Uncertainties
+
+            /*
             //
+            vector<float> uncSrc(0);
             for(unsigned isrc=0;isrc<jecUncSrcNames.size();isrc++) {
                 //for(unsigned isrc=0;isrc<2;isrc++) {
                 mPFUncSrc[isrc]->setJetEta(pfjetchs.eta());

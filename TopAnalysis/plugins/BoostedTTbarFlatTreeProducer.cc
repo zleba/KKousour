@@ -155,6 +155,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 
 
   string globTag;
+  /*
   if('B' <= period  && period <= 'D')
       globTag = "Summer16_07Aug2017BCD_V1";
   else if('E' <= period  && period <= 'F')
@@ -166,6 +167,19 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   else {
       assert(0);
   }
+  */
+
+
+  if('B' <= period  && period <= 'D')
+      globTag = "Summer16_07Aug2017BCD_V4";
+  else if('E' <= period  && period <= 'F')
+      globTag = "Summer16_07Aug2017EF_V4";
+  else if('G' <= period && period <= 'H')
+      globTag = "Summer16_07Aug2017GH_V4";
+  else {
+      assert(0);
+  }
+
 
   string jetType = "AK4PFchs";
   if(p.jetType_.find("Puppi") != string::npos) {
@@ -407,6 +421,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
               if(bit) trigNames.insert(trigger_name);
               pre = triggerPrescales->getPrescaleForIndex(itrig);
               if (bit) {
+                  //cout << "Passed " << p.triggerNames_[k].c_str() << endl;
                   triggerPassHisto_->Fill(p.triggerNames_[k].c_str(),1);
               } 
           }
@@ -467,10 +482,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
               P4.SetPtEtaPhiM(obj.pt(),obj.eta(),obj.phi(),obj.mass());
               bool isIn = false;
               for(const auto &v : hltVecs)
-		if(v == P4) {isIn = true; break;}
+                  if(v == P4) {isIn = true; break;}
               if(!isIn){
-		hltVecs.push_back(P4);
-	      }
+                  hltVecs.push_back(P4);
+              }
           }
       }
       /*
@@ -520,13 +535,13 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   nBJets_ = 0;
   ht_     = 0.0;
 
-  edm::ESHandle<JetCorrectorParametersCollection> PFJetCorParCollCHS;
-  iSetup.get<JetCorrectionsRecord>().get("AK4PFchs",PFJetCorParCollCHS);
-  JetCorrectorParameters const& PFJetCorParCHS = (*PFJetCorParCollCHS)["Uncertainty"];
-  //mPFUncCHS = new JetCorrectionUncertainty(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
-  JetCorrectionUncertainty mPFUncCHS(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
+  //edm::ESHandle<JetCorrectorParametersCollection> PFJetCorParCollCHS;
+  //iSetup.get<JetCorrectionsRecord>().get("AK4PFchs",PFJetCorParCollCHS);
+  //JetCorrectorParameters const& PFJetCorParCHS = (*PFJetCorParCollCHS)["Uncertainty"];
 
-  double unc=0.0;
+  //mPFUncCHS = new JetCorrectionUncertainty(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
+  //JetCorrectionUncertainty mPFUncCHS(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
+
   
   vector<QCDjet> jetVec;
   for(pat::JetCollection::const_iterator ijet =jets->begin();ijet != jets->end(); ++ijet) {
@@ -535,9 +550,9 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       QCDjet jetNow(*ijet);
 
       vector<string> dumy;
-      double CorFactor;
+      double CorFactor, Unc;
       //cout << "PT before " << ijet->pt() << endl;
-      TLorentzVector jet = jetEcorrs.JEC_CHScorrections(p.isMC_, *ijet, *rho, dumy, CorFactor);
+      TLorentzVector jet = jetEcorrs.JEC_CHScorrections(p.isMC_, *ijet, *rho, dumy, CorFactor, Unc);
       //cout << "PT after " << jet.Pt() << endl;
       jetNow.jet = jet;
 
@@ -546,9 +561,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
       float btag = ijet->bDiscriminator(srcBtag_.c_str());
       jetNow.btag = (btag >=btagMin_);
 
-      mPFUncCHS.setJetEta(ijet->eta());
-      mPFUncCHS.setJetPt(jet.Pt()); // here you must use the CORRECTED jet pt
-      jetNow.unc = mPFUncCHS.getUncertainty(true);
+      //mPFUncCHS.setJetEta(ijet->eta());
+      //mPFUncCHS.setJetPt(jet.Pt()); // here you must use the CORRECTED jet pt
+      jetNow.unc = Unc;
+      //cout << "Jet unc is " << jet.Pt()<<" "<< Unc << endl;
       jetNow.jetJECfact = CorFactor;
       jetVec.push_back(jetNow);
   }

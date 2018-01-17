@@ -5,7 +5,6 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
         ignoreTotal = cms.untracked.int32(1) )
 
 
-
 options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
@@ -40,14 +39,18 @@ lf = ff + options.nFiles
 curFiles =  runList[ff:lf]
 
 process = cms.Process('myprocess')
+
+
 process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outputFile))
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 #process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 #process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v16'
-process.GlobalTag.globaltag = '80X_dataRun2_2016LegacyRepro_v4'
+process.GlobalTag.globaltag = '80X_dataRun2_2016LegacyRepro_v4' #Curr
+
 #process.GlobalTag.globaltag = '80X_dataRun2_2016SeptRepro_v5' UUH choice
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+
 print "MaxEvents="+str(process.maxEvents)
 process.source = cms.Source("PoolSource",
   fileNames = cms.untracked.vstring(
@@ -87,7 +90,7 @@ addMETCollection(process, labelName='patPFMet', metSource='pfMet') # RAW MET
 process.patPFMet.addGenMET = False
 
 process.pfMetCHS = process.pfMet.clone()
-process.pfMetCHS.src = cms.InputTag("chs")
+process.pfMetCHS.src = cms.InputTag("packedPFCandidates")
 process.pfMetCHS.alias = cms.string('pfMetCHS')
 addMETCollection(process, labelName='patPFMetCHS', metSource='pfMetCHS') # RAW CHS MET
 process.patPFMetCHS.addGenMET = False
@@ -123,7 +126,8 @@ process.slMETsCHS.addGenMET = False
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 50000
+process.MessageLogger.cerr.FwkReport.reportEvery = 200
+process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
 process.goodJets = selectedPatJets.clone(src='slimmedJets',cut='pt>30 & abs(eta)<2.4')
@@ -175,7 +179,7 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
 #  muons            = cms.InputTag('slimmedMuons'),
 #  electrons        = cms.InputTag('slimmedElectrons'),
   met1              = cms.InputTag('slimmedMETs'),
-  met2              = cms.InputTag('slimmedMETsNoHF'),
+  met2              = cms.InputTag('slimmedMETs'), #slMETsCHS
   met3              = cms.InputTag('slimmedMETsPuppi'),
   vertices         = cms.InputTag('offlineSlimmedPrimaryVertices'),
   rho              = cms.InputTag('fixedGridRhoFastjetAll'),
@@ -192,7 +196,6 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
   htMin            = cms.double(5),
   etaMax           = cms.double(5),
   kinfit           = cms.string('kinFitTtFullHadEvent'),
-  #listFile         = cms.string(options
   fileNames  =       cms.string(curFiles[0]),
   btagMinThreshold = cms.double(0.814),
   btagMin          = cms.double(0.1),                     
@@ -217,7 +220,7 @@ process.ak4 = process.ak8.clone(
     jets            = cms.InputTag('slimmedJets'),
     triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v',
         'HLT_DiPFJetAve40_v', 'HLT_DiPFJetAve60_v', 'HLT_DiPFJetAve80_v', 'HLT_DiPFJetAve140_v', 'HLT_DiPFJetAve200_v', 'HLT_DiPFJetAve260_v', 'HLT_DiPFJetAve320_v', 'HLT_DiPFJetAve400_v', 'HLT_DiPFJetAve500_v',
-       'HLT_DiPFJetAve60_HFJEC', 'HLT_DiPFJetAve80_HFJEC', 'HLT_DiPFJetAve100_HFJEC', 'HLT_DiPFJetAve160_HFJEC', 'HLT_DiPFJetAve220_HFJEC', 'HLT_DiPFJetAve300_HFJEC',),
+       'HLT_DiPFJetAve60_HFJEC_v', 'HLT_DiPFJetAve80_HFJEC_v', 'HLT_DiPFJetAve100_HFJEC_v', 'HLT_DiPFJetAve160_HFJEC_v', 'HLT_DiPFJetAve220_HFJEC_v', 'HLT_DiPFJetAve300_HFJEC_v',),
     genjets         = cms.untracked.InputTag('slimmedGenJets'),
     jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
