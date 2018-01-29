@@ -147,11 +147,15 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 
   //Init of JEC
 
-  const string sPatern = "data/Run2016";
-  size_t place = p.curFile_.find(sPatern);
-  assert(place != string::npos);
-  cout << p.curFile_ << endl;
-  char period = p.curFile_[place + sPatern.size()];
+  char period = 'P';
+  if(!p.isMC_) {
+      const string sPatern = "data/Run2016";
+      cout << "RADEK " << p.curFile_ << endl;
+      size_t place = p.curFile_.find(sPatern);
+      assert(place != string::npos);
+      cout << p.curFile_ << endl;
+      char period = p.curFile_[place + sPatern.size()];
+  }
 
 
   string globTag;
@@ -169,8 +173,9 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   }
   */
 
-
-  if('B' <= period  && period <= 'D')
+  if(p.isMC_)
+      globTag = "Summer16_07Aug2017_V4";
+  else if('B' <= period  && period <= 'D')
       globTag = "Summer16_07Aug2017BCD_V4";
   else if('E' <= period  && period <= 'F')
       globTag = "Summer16_07Aug2017EF_V4";
@@ -189,10 +194,10 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   }
 
   vector<string> dumy;
-  //exit(0);
 
-  cout << "Jet type is :"  << jetType << endl;
+  cout << "Jet type is :"  << p.isMC_ <<" "<< jetType << endl;
   jetEcorrs.Init(p.isMC_, globTag, jetType, "", dumy);
+  //exit(0);
  
   //--- book the tree ----------------------------------
   outTree_ = fs_->make<TTree>("events","events");
@@ -207,20 +212,20 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   outTree_->Branch("pvndof"               ,&pvndof_            ,"pvndof/F");
   outTree_->Branch("rho"                  ,&rho_               ,"rho/F");
   outTree_->Branch("ht"                   ,&ht_                ,"ht/F");
-  outTree_->Branch("metEt"                ,&metEt_             ,"metEt/F");
-  outTree_->Branch("metSumEt"             ,&metSumEt_          ,"metSumEt/F");
-  outTree_->Branch("metpt"               ,&metpt_             ,"metpt/F");
-  outTree_->Branch("metphi"              ,&metphi_            ,"metphi/F");
+  outTree_->Branch("metEtPF"                ,&metEtPF_             ,"metEtPF/F");
+  outTree_->Branch("metSumEtPF"             ,&metSumEtPF_          ,"metSumEtPF/F");
+  outTree_->Branch("metPtPF"               ,&metPtPF_             ,"metPtPF/F");
+  outTree_->Branch("metPhiPF"              ,&metPhiPF_            ,"metPhiPF/F");
   // outTree_->Branch("metmass_"             ,&metmass_           ,"metmass_/F");
-  outTree_->Branch("metEtNoHF"            ,&metEtNoHF_         ,"metEtNoHF/F");
-  outTree_->Branch("metSumEtNoHF"         ,&metSumEtNoHF_      ,"metSumEtNoHF/F");
-  outTree_->Branch("metNoHFpt"           ,&metNoHFpt_         ,"metNoHFpt/F");
-  outTree_->Branch("metNoHFphi"          ,&metNoHFphi_        ,"metNoHFphi/F");
-  //  outTree_->Branch("metNoHFmass_"         ,&metNoHFmass_       ,"metNoHFmass_/F");
+  outTree_->Branch("metEtCHS"            ,&metEtCHS_         ,"metEtCHS/F");
+  outTree_->Branch("metSumEtCHS"         ,&metSumEtCHS_      ,"metSumEtCHS/F");
+  outTree_->Branch("metPtCHS"           ,&metPtCHS_         ,"metPtCHS/F");
+  outTree_->Branch("metPhiCHS"          ,&metPhiCHS_        ,"metPhiCHS/F");
+  //  outTree_->Branch("metCHSmass_"         ,&metCHSmass_       ,"metCHSmass_/F");
   outTree_->Branch("metEtPuppi"           ,&metEtPuppi_        ,"metEtPuppi/F");
   outTree_->Branch("metSumEtPuppi"        ,&metSumEtPuppi_     ,"metSumEtPuppi/F");
-  outTree_->Branch("metPuppipt"          ,&metPuppipt_        ,"metPuppipt/F");
-  outTree_->Branch("metPuppiphi"         ,&metPuppiphi_       ,"metPuppiphi/F");
+  outTree_->Branch("metPtPuppi"          ,&metPtPuppi_        ,"metPtPuppi/F");
+  outTree_->Branch("metPhiPuppi"         ,&metPhiPuppi_       ,"metPhiPuppi/F");
   //  outTree_->Branch("metPuppimass_"        ,&metPuppimass_      ,"metPuppimass_/F");
   //------------------------------------------------------------------
   flavor_         = new std::vector<int>;
@@ -284,7 +289,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 
   outTree_->Branch("nTriggerObjects", &nTriggerObjects_, "nTriggerObjects/I");
 
-  cout<<"Begin job finished"<<endl;
+  cout<<"RADEK Begin job finished"<<endl;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::endJob() 
@@ -360,13 +365,14 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup const& iSetup) 
 {
-  //cout <<"RADEKstart " <<  iEvent.id().event()<< endl;
+  cout <<"RADEKstart " <<  iEvent.id().event()<< endl;
 
   initialize();
 
   //  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
 
   //    if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
+  cout << "RADEK begin of init" << endl;
 
   edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects1;
 
@@ -384,6 +390,7 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   triggerBit_->clear();
   triggerPre_->clear();
+  cout << "RADEK end of init" << endl;
 
   //-------------- Trigger Info -----------------------------------
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
@@ -666,22 +673,25 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   evt_    = iEvent.id().event();
   lumi_   = iEvent.id().luminosityBlock();
 
-  metEt_ = (*met1)[0].et();
-  metSumEt_ = (*met1)[0].sumEt();
-  metpt_ = (*met1)[0].pt();
-  metphi_ = (*met1)[0].phi();
+  metEtPF_ = (*met1)[0].et();
+  metSumEtPF_ = (*met1)[0].sumEt();
+  metPtPF_ = (*met1)[0].pt();
+  metPhiPF_ = (*met1)[0].phi();
   // metmass_ = (*met1)[0].mass();
 
-  metEtNoHF_ = (*met2)[0].et();
-  metSumEtNoHF_ = (*met2)[0].sumEt();
-  metNoHFpt_ = (*met2)[0].pt();
-  metNoHFphi_ = (*met2)[0].phi();
+  metEtCHS_ = (*met2)[0].et();
+  metSumEtCHS_ = (*met2)[0].sumEt();
+  metPtCHS_ = (*met2)[0].pt();
+  metPhiCHS_ = (*met2)[0].phi();
   //  metNoHFmass_ = (*met2)[0].mass();
 
   metEtPuppi_ = (*met3)[0].et();
   metSumEtPuppi_ =(*met3)[0].sumEt();
-  metPuppipt_ = (*met3)[0].pt();
-  metPuppiphi_ = (*met3)[0].phi();
+  metPtPuppi_ = (*met3)[0].pt();
+  metPhiPuppi_ = (*met3)[0].phi();
+
+
+  //cout <<"Met types " << metEtPF_ << " "<<  metEtCHS_ <<" "<< metEtPuppi_ << endl;
 
   //cout << metCHS->size()<< "  " << metEt_ << " "<< (*metCHS)[0].et() <<  endl;
 
@@ -725,20 +735,20 @@ void BoostedTTbarFlatTreeProducer::initialize()
   nVtx_           = -1;
   nJets_          = -1;
   rho_            = -1;
-  metEt_          = -1;
-  metEtNoHF_      = -1;
+  metEtPF_        = -1;
+  metEtCHS_      = -1;
   metEtPuppi_     = -1;
-  metSumEt_       = -1;
-  metSumEtNoHF_   = -1;
+  metSumEtPF_       = -1;
+  metSumEtCHS_   = -1;
   metSumEtPuppi_  = -1;
-  metpt_          = -1;
-  metphi_         = -1;
+  metPtPF_          = -1;
+  metPhiPF_         = -1;
   //metmass_        = -1;
-  metNoHFpt_      = -1;
-  metNoHFphi_     = -1;
-  //metNoHFmass_    = -1;
-  metPuppipt_     = -1;
-  metPuppiphi_    = -1;
+  metPtCHS_      = -1;
+  metPhiCHS_     = -1;
+  //metCHSmass_    = -1;
+  metPtPuppi_     = -1;
+  metPhiPuppi_    = -1;
   //metPuppimass_   = -1;
   pvRho_          = -999;
   pvz_            = -999;

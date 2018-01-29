@@ -202,8 +202,8 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- global event variables -----
     int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_,nTriggerObjects_;
     float rho_,met_,metSig_,ht_,mva_,pvRho_,pvz_,pvndof_,pvchi2_,mvaGen_,metGenSig_;
-    float metEt_,metSigEt_,metSumEt_,metEtNoHF_,metSigEtNoHF_,metSumEtNoHF_,metEtPuppi_,metSigEtPuppi_,metSumEtPuppi_;
-    float metpt_,metphi_,metNoHFpt_,metNoHFphi_,metPuppipt_,metPuppiphi_;
+    float metEtCHS_,metSigEt_,metSumEtCHS_,metEtPF_,metSigEtPF_,metSumEtPF_,metEtPuppi_,metSigEtPuppi_,metSumEtPuppi_;
+    float metPtCHS_,metPhiCHS_,metPtPF_,metPhiPF_,metPtPuppi_,metPhiPuppi_;
     std::vector<bool> *triggerBit_;
     std::vector<int>  *triggerPre_;
     //---- top variables --------------

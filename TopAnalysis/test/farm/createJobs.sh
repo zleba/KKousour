@@ -24,7 +24,9 @@ do
         #echo 'cd $TMPDIR' >> $subFile
         echo 'pwd' >> $subFile
         #echo "cp $ADDRESS/flatData-TTJets-cfg.py ." >> $subFile
-        echo "cmsRun $ADDRESS/flatData-TTJets-cfg.py  listFile=$listADDRESS/$file  startFile=$i  nFiles=$step outputFile=$DUST/${name}.root" >> $subFile 
+
+        #echo "cmsRun $ADDRESS/flatData-TTJets-cfg.py  listFile=$listADDRESS/$file  startFile=$i  nFiles=$step outputFile=$DUST/${name}.root" >> $subFile 
+        echo "cmsRun $ADDRESS/flatData-new.py  listFile=$listADDRESS/$file  startFile=$i  nFiles=$step outputFile=$DUST/${name}.root" >> $subFile 
         #echo "cp *.root $DUST/${name}.root" >> $subFile 
 
         chmod u+x $subFile
