@@ -10,7 +10,7 @@ options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
         #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/runG.txt", # default value
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/QCD_Pt_120to170_TuneCUETP8M1_13TeV_pythia8.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/1000to1400.txt", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float
         "Name of file with list of files")
@@ -43,10 +43,14 @@ process.TFileService=cms.Service("TFileService",fileName=cms.string(options.outp
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 #process.GlobalTag.globaltag = '80X_dataRun2_ICHEP16_repro_v0'
 
+print 'current file is', curFiles
+
 if 'mc' in curFiles[0]:
     process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_2016_TrancheIV_v6' #forMC
-else
+    print "MC tag used"
+else:
     process.GlobalTag.globaltag = '80X_dataRun2_2016LegacyRepro_v4' #Curr for legacy Data
+    print "DATA tag used"
 
 ##-------------------- Define the source  ----------------------------
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
@@ -104,7 +108,7 @@ clean_met_(process.slMETsCHS)
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
+process.MessageLogger.cerr.FwkReport.reportEvery = 10000
 process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets

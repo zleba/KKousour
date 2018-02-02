@@ -154,7 +154,8 @@ void BoostedTTbarFlatTreeProducer::beginJob()
       size_t place = p.curFile_.find(sPatern);
       assert(place != string::npos);
       cout << p.curFile_ << endl;
-      char period = p.curFile_[place + sPatern.size()];
+      period = p.curFile_[place + sPatern.size()];
+      cout << "period is " << period << endl;
   }
 
 
@@ -365,14 +366,12 @@ bool BoostedTTbarFlatTreeProducer::isGoodJet(const pat::Jet &jet)
 //////////////////////////////////////////////////////////////////////////////////////////
 void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventSetup const& iSetup) 
 {
-  cout <<"RADEKstart " <<  iEvent.id().event()<< endl;
 
   initialize();
 
   //  edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
 
   //    if(p.isPrint_) cout<<"**** EVENT ****"<<endl;
-  cout << "RADEK begin of init" << endl;
 
   edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects1;
 
@@ -390,7 +389,6 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   triggerBit_->clear();
   triggerPre_->clear();
-  cout << "RADEK end of init" << endl;
 
   //-------------- Trigger Info -----------------------------------
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerResults);  
@@ -441,7 +439,8 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   }   
 
   //skip events without fired trigger
-  if(!passTrigger) return;
+  //cout << "passTriggers " << passTrigger <<" " << nTrue << endl;
+  if(!p.isMC_ && !passTrigger) return;
 
   //exit(0);
   /*
@@ -697,30 +696,10 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
 
   //metPuppimass_ = (*met3)[0].mass();
 
-  bool cut_RECO = (nJets_ >= 1);  
- 
-  cutFlowHisto_->Fill("All",1);
-  if (iEvent.isRealData()) {
-     if(passTrigger) { outTree_->Fill();
-     //cout <<"RADEKend " <<  iEvent.id().event()<< endl;
-     }
-    /*
-    if (cut_RECO) {
-      cutFlowHisto_->Fill("At least one jet",1);
-      if (passTrigger || 1) {
-        cutFlowHisto_->Fill("Trigger",1);
-      }
-    }
-    */
+  //cout << "I am filling " << endl;
+  outTree_->Fill();
 
-  } 
-  else {
-    if (cut_RECO) {
-      cutFlowHisto_->Fill("At least one jet (reco || gen)",1);
-      outTree_->Fill();
-    }
-  }
-  //if(mPFUncCHS) delete mPFUncCHS;
+
 
 }
 
