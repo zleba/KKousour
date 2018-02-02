@@ -167,19 +167,40 @@ class JECs  {
         }
 
 
-        void Init(bool IsMCarlo, string GlobalTag, string JETTYPE, string jecUncSrc, vector<string> mJECUncSrcNames){
+        void Init(bool IsMCarlo, string GlobalTag, char period, int version, string JETTYPE, string jecUncSrc, vector<string> mJECUncSrcNames){
 
             string file_data_mc = "DATA";
             if(IsMCarlo)    file_data_mc = "MC";
 
-            string path = "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/data/JECtablas/";
-            cout << "JECpath: " << path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_L1FastJet_"+JETTYPE+".txt" << endl;
-            //exit(1);
-            L1Fast       = new JetCorrectorParameters(path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_L1FastJet_"+JETTYPE+".txt");
-            L2Relative   = new JetCorrectorParameters(path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_L2Relative_"+JETTYPE+".txt");
-            L3Absolute   = new JetCorrectorParameters(path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_L3Absolute_"+JETTYPE+".txt");
+            string Period = "";
+            if(IsMCarlo)
+                Period = "";
+            else if('B' <= period  && period <= 'D')
+                Period = "BCD";
+            else if('E' <= period  && period <= 'F')
+                Period = "EF";
+            else if('G' <= period && period <= 'H')
+                Period = "GH";
+            else {
+                assert(0);
+            }
+
+
+
+            const string path = "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/data/JECtablas/";
+
+            auto WholePath = [&](string type) {
+                return path+"/"+GlobalTag+"_V"+ to_string(version) +"/" +
+                GlobalTag +Period + "_V"+to_string(version)+"_"+ file_data_mc+"/"+
+                GlobalTag +Period + "_V"+to_string(version)+"_"+ file_data_mc+"_"+type+"_"+JETTYPE+".txt";
+            };
+            cout << "JECpath: " << WholePath("L1FastJet") << endl;
+
+            L1Fast       = new JetCorrectorParameters(WholePath("L1FastJet"));
+            L2Relative   = new JetCorrectorParameters(WholePath("L2Relative"));
+            L3Absolute   = new JetCorrectorParameters(WholePath("L3Absolute"));
             if(!IsMCarlo)
-                L2L3Residual = new JetCorrectorParameters(path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_L2L3Residual_"+JETTYPE+".txt");
+                L2L3Residual = new JetCorrectorParameters(WholePath("L2L3Residual"));
 
             vecL1Fast.push_back(*L1Fast);
             vecL2Relative.push_back(*L2Relative);
@@ -195,7 +216,7 @@ class JECs  {
                 jecL2L3Residual = new FactorizedJetCorrector(vecL2L3Residual);
 
             ///Read Uncertainty txt files
-            mPFUnc = new JetCorrectionUncertainty(path+"/"+GlobalTag+"_"+file_data_mc+"/"+GlobalTag+"_"+file_data_mc+"_Uncertainty_"+JETTYPE+".txt");    
+            mPFUnc = new JetCorrectionUncertainty(WholePath("Uncertainty"));    
 
             for(unsigned isrc=0;isrc<mJECUncSrcNames.size();isrc++) {
                 cout<<mJECUncSrcNames[isrc]<<endl;

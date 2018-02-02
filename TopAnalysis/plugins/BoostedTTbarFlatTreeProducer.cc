@@ -159,32 +159,9 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   }
 
 
-  string globTag;
-  /*
-  if('B' <= period  && period <= 'D')
-      globTag = "Summer16_07Aug2017BCD_V1";
-  else if('E' <= period  && period <= 'F')
-      globTag = "Summer16_07Aug2017EF_V1";
-  else if('G' == period)
-      globTag = "Summer16_07Aug2017G_V1";
-  else if('H' == period)
-      globTag = "Summer16_07Aug2017H_V1";
-  else {
-      assert(0);
-  }
-  */
 
-  if(p.isMC_)
-      globTag = "Summer16_07Aug2017_V4";
-  else if('B' <= period  && period <= 'D')
-      globTag = "Summer16_07Aug2017BCD_V4";
-  else if('E' <= period  && period <= 'F')
-      globTag = "Summer16_07Aug2017EF_V4";
-  else if('G' <= period && period <= 'H')
-      globTag = "Summer16_07Aug2017GH_V4";
-  else {
-      assert(0);
-  }
+  string jecTag = "Summer16_07Aug2017";
+  int version = 4;
 
 
   string jetType = "AK4PFchs";
@@ -197,7 +174,7 @@ void BoostedTTbarFlatTreeProducer::beginJob()
   vector<string> dumy;
 
   cout << "Jet type is :"  << p.isMC_ <<" "<< jetType << endl;
-  jetEcorrs.Init(p.isMC_, globTag, jetType, "", dumy);
+  jetEcorrs.Init(p.isMC_, jecTag, period, version, jetType, "", dumy);
   //exit(0);
  
   //--- book the tree ----------------------------------
