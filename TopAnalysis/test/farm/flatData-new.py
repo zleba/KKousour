@@ -9,8 +9,8 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
 options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/G.txt", # default value
-        #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/1000to1400.txt", # default value
+        #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/E.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/1000to1400.txt", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float
         "Name of file with list of files")
@@ -108,7 +108,7 @@ clean_met_(process.slMETsCHS)
 
 #############   Format MessageLogger #################
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 10000
+process.MessageLogger.cerr.FwkReport.reportEvery = 30000
 process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
 
 from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
@@ -199,7 +199,8 @@ process.ak8 = cms.EDAnalyzer('BoostedTTbarFlatTreeProducer',
 )
 
 process.ak4 = process.ak8.clone(
-    jets            = cms.InputTag('slimmedJets'),
+    jetsCHS            = cms.InputTag('slimmedJets'),
+    jetsPUPPI          = cms.InputTag('slimmedJetsPuppi'),
     triggerNames    = cms.vstring('HLT_PFJet40_v','HLT_PFJet60_v','HLT_PFJet80_v','HLT_PFJet140_v','HLT_PFJet200_v','HLT_PFJet260_v','HLT_PFJet320_v','HLT_PFJet400_v','HLT_PFJet450_v','HLT_PFJet500_v',
         'HLT_DiPFJetAve40_v', 'HLT_DiPFJetAve60_v', 'HLT_DiPFJetAve80_v', 'HLT_DiPFJetAve140_v', 'HLT_DiPFJetAve200_v', 'HLT_DiPFJetAve260_v', 'HLT_DiPFJetAve320_v', 'HLT_DiPFJetAve400_v', 'HLT_DiPFJetAve500_v',
        'HLT_DiPFJetAve60_HFJEC_v', 'HLT_DiPFJetAve80_HFJEC_v', 'HLT_DiPFJetAve100_HFJEC_v', 'HLT_DiPFJetAve160_HFJEC_v', 'HLT_DiPFJetAve220_HFJEC_v', 'HLT_DiPFJetAve300_HFJEC_v',),
@@ -210,7 +211,6 @@ process.ak4 = process.ak8.clone(
 process.ak4PUPPI = process.ak4.clone(
     jets            = cms.InputTag('slimmedJetsPuppi'),
     genjets         = cms.untracked.InputTag('slimmedGenJetsPuppi'),
-    jetFlavourInfos = cms.InputTag("genJetFlavourInfos"),
 )
 
 
@@ -238,8 +238,8 @@ process.p = cms.Path(
 #   process.goodJets * 
 #   process.kinFitTtFullHadEvent * 
 #   process.ak8*process.ak4 * process.ak4PUPPI 
-   process.ak4*
-process.ak4PUPPI
+#   process.ak4*
+   process.ak4
 )
 process.p.associate(task)
 process.p.associate(process.patAlgosToolsTask)

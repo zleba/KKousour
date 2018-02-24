@@ -26,6 +26,7 @@ class JECs  {
         //return j1.ptCor() > j2.ptCor();
     //}
 
+    bool isMC;
 
     JetCorrectorParameters *L1Fast, *L2Relative, *L3Absolute, *L2L3Residual;
     vector<JetCorrectorParameters> vecL1Fast, vecL2Relative, vecL3Absolute, vecL2L3Residual;
@@ -38,59 +39,60 @@ class JECs  {
     std::vector<string> mJECUncSrcNames;
 
 
-    virtual TLorentzVector JEC_CHScorrections(bool IsMCarlo, const pat::Jet &jetNow, double  pfRho, vector<string> jecUncSrcNames, double &CorFactor, double &unc)
+    virtual double JEC_CHScorrections(double pt, double eta, double pfjetArea, double  pfRho, vector<string> jecUncSrcNames, double &CorFactorL2L3res, double &unc)
     {
 
         // ---- declaration of the vector of jets ---- //
         //vector<QCDPFJet> mPFJetsCHS; mPFJetsCHS.clear();
 
-        TLorentzVector UnCorrectedJet = TLorentzVector(jetNow.px(), jetNow.py(), jetNow.pz(), jetNow.energy() );
+        //TLorentzVector UnCorrectedJet = TLorentzVector(jetNow.px(), jetNow.py(), jetNow.pz(), jetNow.energy() );
+        double UnCorrectedPt = pt;
 
-        double pfjetArea = jetNow.jetArea();//pfjetchs.area());
+        //double pfjetArea = jetNow.jetArea();//pfjetchs.area());
         //double pfRho  = 0;//Event->evtHdr().pfRho()
 
         // ----- looping over the number of jets in the event ---- //
 
             //TLorentzVector UnCorrectedJet = tmpJet; ///Jets are already uncorrected
             // ---- Evaluating the L1Fast correction factor ---- //
-            jecL1Fast->setJetPt(UnCorrectedJet.Pt());
+            jecL1Fast->setJetPt(pt);
             jecL1Fast->setJetA(pfjetArea);
             jecL1Fast->setRho(pfRho);
-            jecL1Fast->setJetEta(UnCorrectedJet.Eta());
+            jecL1Fast->setJetEta(eta);
             //std::cout<<std::endl<<pfjetchs.area()<<std::endl;
 
             double corFactorL1Fast = jecL1Fast->getCorrection();
             //cout<<"L1Fast Cor Factor = "<<corFactorL1Fast<<endl;
-            TLorentzVector tmpJetL1FastCorrected =
-                UnCorrectedJet * corFactorL1Fast; // ---- getting the jet corrected at L1Fast level ----- //
+            double tmpJetL1FastCorrected =
+                UnCorrectedPt * corFactorL1Fast; // ---- getting the jet corrected at L1Fast level ----- //
 
             // ---- Evaluating the L2Relative correction factor ---- //
-            jecL2Relative->setJetPt(tmpJetL1FastCorrected.Pt());
-            jecL2Relative->setJetEta(tmpJetL1FastCorrected.Eta());
+            jecL2Relative->setJetPt(tmpJetL1FastCorrected);
+            jecL2Relative->setJetEta(eta);
 
             double corFactorL2Relative = jecL2Relative->getCorrection();
             //cout<<"L2Relative Cor Factor"<<corFactorL2Relative<<endl;
-            TLorentzVector tmpJetL1FastL2RelativeCorrected =
+            double tmpJetL1FastL2RelativeCorrected =
                 tmpJetL1FastCorrected * corFactorL2Relative; //  ---- getting the jet corrected at L1Fast*L2Relative level ----- //
 
             // ---- Evaluating the L3Absolute correction factor ---- //
-            jecL3Absolute->setJetPt(tmpJetL1FastL2RelativeCorrected.Pt());
-            jecL3Absolute->setJetEta(tmpJetL1FastL2RelativeCorrected.Eta());
+            jecL3Absolute->setJetPt(tmpJetL1FastL2RelativeCorrected);
+            jecL3Absolute->setJetEta(eta);
 
             double corFactorL3Absolute = jecL3Absolute->getCorrection();
             //cout<<"L3Absolute Cor Factor"<<corFactorL3Absolute<<endl;
-            TLorentzVector tmpJetL1FastL2RelativeL3AbsoluteCorrected =
+            double tmpJetL1FastL2RelativeL3AbsoluteCorrected =
                 tmpJetL1FastL2RelativeCorrected * corFactorL3Absolute; // -- getting the jet corrected at L1Fast*L2Relative*L3Absolute level -- //
 
 
             // ---- Evaluating the L2L3Rsidual correction factor ---- //
             //TLorentzVector tmpJetL1FastL2RelativeL3AbsoluteCorrected = UnCorrectedJet;
 
-            TLorentzVector tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected;
-            double corFactorL2L3Residual(-1.);
-            if(!IsMCarlo) {
-                jecL2L3Residual->setJetPt(tmpJetL1FastL2RelativeL3AbsoluteCorrected.Pt());
-                jecL2L3Residual->setJetEta(tmpJetL1FastL2RelativeL3AbsoluteCorrected.Eta());
+            double tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected;
+            double corFactorL2L3Residual(1.);
+            if(!isMC) {
+                jecL2L3Residual->setJetPt(tmpJetL1FastL2RelativeL3AbsoluteCorrected);
+                jecL2L3Residual->setJetEta(eta);
 
                 corFactorL2L3Residual = jecL2L3Residual->getCorrection();
                 //cout<<"L2L3Rsidual Cor Factor"<<corFactorL2L3Residual<<endl;
@@ -98,6 +100,7 @@ class JECs  {
                     tmpJetL1FastL2RelativeL3AbsoluteCorrected * corFactorL2L3Residual; //  -- getting the jet corrected at L1Fast*L2Relative*L3Absolute*L2L3Residual level -- /
             } // if(!IsMCarlo)
 
+            CorFactorL2L3res = corFactorL2L3Residual;
 
             auto getUnc =[&](double pt, double eta) {
                 mPFUnc->setJetEta(eta);
@@ -106,28 +109,19 @@ class JECs  {
             };
 
 
-            LorentzVector correctedJetP4; CorFactor = 0;
-            if(!IsMCarlo) { // -- if data, then take the full L1FastL2RelativeL3AbsoluteL2L3Residual corrected jet - //
-                correctedJetP4 = LorentzVector(tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.Px(),
-                        tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.Py(),
-                        tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.Pz(),
-                        tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.E());
-
-                unc = getUnc(correctedJetP4.pt(), correctedJetP4.eta());
-                CorFactor = tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected.E()/UnCorrectedJet.E();
+            //LorentzVector correctedJetP4;
+            double CorFactor = 1;
+            if(!isMC) { // -- if data, then take the full L1FastL2RelativeL3AbsoluteL2L3Residual corrected jet - //
+                unc = getUnc(tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected, eta);
+                CorFactor = tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected/UnCorrectedPt;
                 return tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected;
             }
             else { // -- if mc, the take the L1FastL2RelativeL3Absolute corrected jet --//
-                correctedJetP4 = LorentzVector(tmpJetL1FastL2RelativeL3AbsoluteCorrected.Px(),
-                        tmpJetL1FastL2RelativeL3AbsoluteCorrected.Py(),
-                        tmpJetL1FastL2RelativeL3AbsoluteCorrected.Pz(),
-                        tmpJetL1FastL2RelativeL3AbsoluteCorrected.E());
-
-                unc = getUnc(correctedJetP4.pt(), correctedJetP4.eta());
-                CorFactor = tmpJetL1FastL2RelativeL3AbsoluteCorrected.E()/UnCorrectedJet.E();
+                unc = getUnc(tmpJetL1FastL2RelativeL3AbsoluteCorrected, eta);
+                CorFactor = tmpJetL1FastL2RelativeL3AbsoluteCorrected/UnCorrectedPt;
                 return tmpJetL1FastL2RelativeL3AbsoluteCorrected;
             }
-            return TLorentzVector();
+            return CorFactor;
 
             // ----- Storing the JEC correction factor in each label at a vector --- //
 
@@ -168,6 +162,7 @@ class JECs  {
 
 
         void Init(bool IsMCarlo, string GlobalTag, char period, int version, string JETTYPE, string jecUncSrc, vector<string> mJECUncSrcNames){
+            isMC = IsMCarlo;
 
             string file_data_mc = "DATA";
             if(IsMCarlo)    file_data_mc = "MC";
@@ -179,8 +174,14 @@ class JECs  {
                 Period = "BCD";
             else if('E' <= period  && period <= 'F')
                 Period = "EF";
-            else if('G' <= period && period <= 'H')
-                Period = "GH";
+            else if('G' <= period && period <= 'H') {
+                if( GlobalTag.find("Spring") != std::string::npos) {
+                    Period = period;
+                }
+                else {
+                    Period = "GH";
+                }
+            }
             else {
                 assert(0);
             }
@@ -189,10 +190,11 @@ class JECs  {
 
             const string path = "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/data/JECtablas/";
 
+            string sep = GlobalTag.find("Spring") != std::string::npos ? "" : "_";
             auto WholePath = [&](string type) {
                 return path+"/"+GlobalTag+"_V"+ to_string(version) +"/" +
-                GlobalTag +Period + "_V"+to_string(version)+"_"+ file_data_mc+"/"+
-                GlobalTag +Period + "_V"+to_string(version)+"_"+ file_data_mc+"_"+type+"_"+JETTYPE+".txt";
+                GlobalTag +Period + sep+"V"+to_string(version)+"_"+ file_data_mc+"/"+
+                GlobalTag +Period + sep+"V"+to_string(version)+"_"+ file_data_mc+"_"+type+"_"+JETTYPE+".txt";
             };
             cout << "JECpath: " << WholePath("L1FastJet") << endl;
 

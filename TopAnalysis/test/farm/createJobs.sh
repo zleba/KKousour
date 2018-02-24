@@ -8,12 +8,12 @@ step=6
 
 for run in B C D E F G H
 do
-    file=run${run}.txt
+    file=${run}.txt
     nFiles=`cat $listADDRESS/$file | wc -l`
 
     for i in `seq  1 $step $nFiles`
     do
-        name=jets$run$i
+        name=jets${run}_$i
         subFile=sub/${name}.sub
         echo "#!/bin/bash" > $subFile
         echo "#$ -V" >> $subFile
