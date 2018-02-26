@@ -39,6 +39,31 @@ class JECs  {
     std::vector<string> mJECUncSrcNames;
 
 
+    virtual double GetJECL2L3Residual (double pt, double eta)
+    {
+        jecL2L3Residual->setJetPt(pt);
+        jecL2L3Residual->setJetEta(eta);
+        return  jecL2L3Residual->getCorrection();
+    }
+
+    virtual double GetJECL2Relative (double pt, double eta)
+    {
+        // ---- Evaluating the L2Relative correction factor ---- //
+        jecL2Relative->setJetPt(pt);
+        jecL2Relative->setJetEta(eta);
+        return  jecL2Relative->getCorrection();
+    }
+    virtual double GetJECL3Absolute (double pt, double eta)
+    {
+        // ---- Evaluating the L2Relative correction factor ---- //
+        jecL3Absolute->setJetPt(pt);
+        jecL3Absolute->setJetEta(eta);
+        return  jecL3Absolute->getCorrection();
+    }
+
+
+
+
     virtual double JEC_CHScorrections(double pt, double eta, double pfjetArea, double  pfRho, vector<string> jecUncSrcNames, double &CorFactorL2L3res, double &unc)
     {
 
@@ -114,12 +139,10 @@ class JECs  {
             if(!isMC) { // -- if data, then take the full L1FastL2RelativeL3AbsoluteL2L3Residual corrected jet - //
                 unc = getUnc(tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected, eta);
                 CorFactor = tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected/UnCorrectedPt;
-                return tmpJetL1FastL2RelativeL3AbsoluteL2L3ResidualCorrected;
             }
             else { // -- if mc, the take the L1FastL2RelativeL3Absolute corrected jet --//
                 unc = getUnc(tmpJetL1FastL2RelativeL3AbsoluteCorrected, eta);
                 CorFactor = tmpJetL1FastL2RelativeL3AbsoluteCorrected/UnCorrectedPt;
-                return tmpJetL1FastL2RelativeL3AbsoluteCorrected;
             }
             return CorFactor;
 

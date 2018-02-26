@@ -1,3 +1,5 @@
+<!-- rootcling QCDjet.h    -->
+
 <library   file="*.cc" name="KKousourTopAnalysisPlugins">
 <use   name="root"/> 
 <use   name="rootrflx"/>
@@ -28,3 +30,4 @@
 <use   name="CondFormats/JetMETObjects"/>
 <flags CXXFLAGS="-g -O2 -DDEBUG " EDM_PLUGIN="1"/>
 </library>
+
