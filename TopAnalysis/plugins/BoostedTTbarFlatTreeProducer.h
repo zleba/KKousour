@@ -50,6 +50,7 @@
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfoMatching.h"//add
 
 #include "JEC.h"
+#include "QCDjet.h"
 
 
 #include <sstream>
@@ -65,8 +66,30 @@
 
 using namespace reco;
 
+inline QCDjet GetJet(const pat::Jet &ijet) {
+    QCDjet jjet;
+    jjet.flavor        =ijet.partonFlavour();
+    jjet.flavorHadron  =ijet.hadronFlavour();
+    jjet.chf           =ijet.chargedHadronEnergyFraction();
+    jjet.nhf           =ijet.neutralHadronEnergyFraction(); //NHF
+    jjet.phf           =ijet.photonEnergyFraction();
+    jjet.elf           =ijet.electronEnergyFraction();
+    jjet.muf           =ijet.muonEnergyFraction(); //MUF
+    jjet.chm           =ijet.chargedHadronMultiplicity();
+    jjet.nhm           =ijet.neutralHadronMultiplicity();
+    jjet.phm           =ijet.photonMultiplicity();
+    jjet.elm           =ijet.electronMultiplicity();
+    jjet.mum           =ijet.muonMultiplicity();
+    jjet.area          =ijet.jetArea();
+    jjet.p4            =ROOT::Math::PtEtaPhiM4D<float>(ijet.pt(), ijet.eta(), ijet.phi(), ijet.mass());
+    return jjet;
+}
+
+
+
+
 struct Parameters {
-    edm::EDGetTokenT<pat::JetCollection> jetsToken;
+    edm::EDGetTokenT<pat::JetCollection> jetsCHSToken, jetsPUPPIToken;
     edm::EDGetTokenT<GenJetCollection> genjetsToken;
     //  muonsToken         
     //electronsToken       
@@ -108,9 +131,10 @@ struct Parameters {
     edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
     Parameters(edm::ParameterSet const& cfg,  edm::ConsumesCollector && iC) {
-        jetsToken             = iC.consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jets"));
+        jetsCHSToken             = iC.consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jetsCHS"));
+        jetsPUPPIToken           = iC.consumes<pat::JetCollection>(cfg.getParameter<edm::InputTag>("jetsPUPPI"));
 
-        stringstream temp; temp << cfg.getParameter<edm::InputTag>("jets");
+        stringstream temp; temp << cfg.getParameter<edm::InputTag>("jetsCHS");
         jetType_ = temp.str();
 
         genjetsToken          = iC.consumes<GenJetCollection>(cfg.getUntrackedParameter<edm::InputTag>("genjets",edm::InputTag("")));
@@ -189,8 +213,8 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //    edm::EDGetTokenT<pat::MuonCollection> muonsToken;
     //edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
  
-    std::string srcBtag_;//,xmlFile_;
-    double btagMin_;
+    //std::string srcBtag_;//,xmlFile_;
+    //double btagMin_;
 
     //---------------------------------------------------
     edm::Service<TFileService> fs_;
@@ -202,8 +226,11 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- global event variables -----
     int   run_,evt_,nVtx_,lumi_,nJets_,nBJets_,nLeptons_,nGenJets_,nTriggerObjects_;
     float rho_,met_,metSig_,ht_,mva_,pvRho_,pvz_,pvndof_,pvchi2_,mvaGen_,metGenSig_;
-    float metEt_,metSigEt_,metSumEt_,metEtNoHF_,metSigEtNoHF_,metSumEtNoHF_,metEtPuppi_,metSigEtPuppi_,metSumEtPuppi_;
-    float metpt_,metphi_,metNoHFpt_,metNoHFphi_,metPuppipt_,metPuppiphi_;
+    float metEtCHS_,metSigEt_,metSumEtCHS_,metEtPF_,metSigEtPF_,metSumEtPF_,metEtPuppi_,metSigEtPuppi_,metSumEtPuppi_;
+    float metPtCHS_,metPhiCHS_,metPtPF_,metPhiPF_,metPtPuppi_,metPhiPuppi_;
+    vector<QCDjet> *chsJets_, *puppiJets_;
+    vector< ROOT::Math::PtEtaPhiM4D<float> > *HLTjets_, *genJets_;
+
     std::vector<bool> *triggerBit_;
     std::vector<int>  *triggerPre_;
     //---- top variables --------------
@@ -213,7 +240,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     //---- jet variables --------------
     std::vector<bool>  *isBtag_;
     std::vector<int>   *flavor_,*nSubJets_,*nSubGenJets_,*nBSubJets_,*flavorHadron_;
-    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*trigobjpt_, *trigobjeta_, *trigobjphi_, *jetJECfact_;
+    std::vector<float> *cor_, *unc_,*pt_,*eta_,*phi_,*mass_,*jetArea_, *massSoftDrop_,*energy_,*chf_,*nhf_,*phf_,*elf_,*muf_,*btag_,*trigobjpt_, *trigobjeta_, *trigobjphi_, *jetJECfact_;
     std::vector<int> *chm_, *nhm_, *phm_, *elm_, *mum_;
     std::vector<float> *btagSub0_,*btagSub1_,*massSub0_,*massSub1_,*ptSub0_,*ptSub1_,*etaSub0_,*etaSub1_,*phiSub0_,*phiSub1_;
     std::vector<int>   *flavorSub0_,*flavorSub1_,*flavorHadronSub0_,*flavorHadronSub1_;
@@ -256,7 +283,7 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     std::vector<bool> *isBJetGen_;
     std::vector<bool> *isWJetGen_;
 
-    edm::Handle<pat::JetCollection> jets;
+    edm::Handle<pat::JetCollection> jetsCHS, jetsPUPPI;
     edm::Handle<GenJetCollection> genjets;
     //edm::Handle<pat::MuonCollection> muons;
     //edm::Handle<pat::ElectronCollection> electrons;
@@ -276,8 +303,8 @@ class BoostedTTbarFlatTreeProducer : public edm::EDAnalyzer
     edm::Handle<LHEEventProduct> lheEvtInfo;
     edm::Handle<LHERunInfoProduct> runInfo;
 
-    JetCorrectionUncertainty *mPFUncCHS;
-    JECs jetEcorrs;
+    //JetCorrectionUncertainty *mPFUncCHS;
+    JECs jetEcorrsCHS, jetEcorrsPUPPI;
 
     //fastjet                                                                                                                                                                   
     //fastjet::Filter* fTrimmer1;

@@ -1,16 +1,19 @@
 ADDRESS=`pwd`
-listADDRESS=$ADDRESS/fileLists/Aug17
-DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuplesJCunc
+listADDRESS=$ADDRESS/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8
+DUST=/nfs/dust/cms/user/zlebcr/JEC/ntuplesMC
 
-step=6
+step=3
 
 #rm sub/*.sub
+mcTags=`for i in  $listADDRESS/*.txt; do basename $i | sed 's/\.txt//'; done`
 
-for run in B C D E F G H
+for run in $mcTags
 do
     file=${run}.txt
     nFiles=`cat $listADDRESS/$file | wc -l`
 
+    #echo $file $nFiles
+    #continue
     for i in `seq  1 $step $nFiles`
     do
         name=jets${run}_$i
