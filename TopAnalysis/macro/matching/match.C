@@ -12,6 +12,7 @@
 #include "TCanvas.h"
 #include "TStyle.h"
 #include <map>
+#include <set>
 #include <vector>
 
 #define SF TString::Format
@@ -265,7 +266,7 @@ struct HistoManager {
 
 };
 
-void match(const char  *fileName, int nevMax)
+void match(const char  *fileName, const char *outDir, int nevMax)
 {
     //TFile *f = TFile::Open("/nfs/dust/cms/user/zlebcr/JEC/ntuples2/merged/jetsG.root");
     TFile *f = TFile::Open(fileName, "READ");
@@ -274,13 +275,18 @@ void match(const char  *fileName, int nevMax)
 
 
     TTreeReaderArray<float> CHSjetPt = {chsTree, "jetPt"};
+    TTreeReaderArray<float> CHSjetUnc = {chsTree, "jetUnc"};
     TTreeReaderArray<float> CHSjetEta = {chsTree, "jetEta"};
     TTreeReaderArray<float> CHSjetPhi = {chsTree, "jetPhi"};
+    TTreeReaderArray<float> CHSjetJEC = {chsTree, "jetJEC"};
+
     TTreeReaderValue<vector<bool>> CHStriggerBit = {chsTree, "triggerBit"};
 
     TTreeReaderArray<float> PUPPIjetPt = {puppiTree, "jetPt"};
+    TTreeReaderArray<float> PUPPIjetUnc = {puppiTree, "jetUnc"};
     TTreeReaderArray<float> PUPPIjetEta = {puppiTree, "jetEta"};
     TTreeReaderArray<float> PUPPIjetPhi = {puppiTree, "jetPhi"};
+    TTreeReaderArray<float> PUPPIjetJEC = {puppiTree, "jetJEC"};
     TTreeReaderValue<vector<bool>> PUPPItriggerBit = {puppiTree, "triggerBit"};
 
     TH1::SetDefaultSumw2();
@@ -296,14 +302,44 @@ void match(const char  *fileName, int nevMax)
     const int nPer = 8;
     vector<TH3D *> hBalEtaPt(nPer);
     vector<TH1D *> hJetPt(nPer);
+    vector<TH3D *> hBalEtaPtUp(nPer);
+    vector<TH1D *> hJetPtUp(nPer);
+    vector<TH3D *> hBalEtaPtDn(nPer);
+    vector<TH1D *> hJetPtDn(nPer);
+    vector<TH3D *> hJECpuppi(nPer);
+    vector<TH3D *> hJECchs(nPer);
+
+    vector<TH2D *> hEtaPtCHS(nPer);
+    vector<TH2D *> hEtaPtPUPPI(nPer);
+    vector<TH2D *> hEtaPtPUPPIalone(nPer);
 
 
-
+    vector<double> jecBins;
+    for(double s = 0.9; s <= 1.6; s += 0.7/70)
+        jecBins.push_back(s);
 
     for(int i = 0; i < nPer; ++i) {
         char per = 'A' + i;
         hBalEtaPt[i] = new TH3D(SF("hBalEtaPt_%c",per), SF("hBalEtaPt_%c",per), etaBins2.size()-1, etaBins2.data(), Ptbinning.size()-1, Ptbinning.data(),  asymBins.size()-1, asymBins.data()); //,  60, 0.8, 1.2);
         hJetPt[i] = new TH1D(SF("hJetPt_%c",per), SF("hJetPt_%c",per), Ptbinning.size()-1, Ptbinning.data());
+
+        hBalEtaPtUp[i] = new TH3D(SF("hBalEtaPtUp_%c",per), SF("hBalEtaPtUp_%c",per), etaBins2.size()-1, etaBins2.data(), Ptbinning.size()-1, Ptbinning.data(),  asymBins.size()-1, asymBins.data()); //,  60, 0.8, 1.2);
+        hJetPtUp[i] = new TH1D(SF("hJetPtUp_%c",per), SF("hJetPtUp_%c",per), Ptbinning.size()-1, Ptbinning.data());
+
+        hBalEtaPtDn[i] = new TH3D(SF("hBalEtaPtDn_%c",per), SF("hBalEtaPtDn_%c",per), etaBins2.size()-1, etaBins2.data(), Ptbinning.size()-1, Ptbinning.data(),  asymBins.size()-1, asymBins.data()); //,  60, 0.8, 1.2);
+        hJetPtDn[i] = new TH1D(SF("hJetPtDn_%c",per), SF("hJetPtDn_%c",per), Ptbinning.size()-1, Ptbinning.data());
+
+        hJECpuppi[i] = new TH3D(SF("hJECpuppi_%c",per), SF("hJECpuppi_%c",per), etaBins2.size()-1, etaBins2.data(),
+                                                                                Ptbinning.size()-1, Ptbinning.data(),
+                                                                                jecBins.size()-1, jecBins.data());
+        hJECchs[i] = new TH3D(SF("hJECchs_%c",per), SF("hJECchs_%c",per), etaBins2.size()-1, etaBins2.data(),
+                                                                          Ptbinning.size()-1, Ptbinning.data(),
+                                                                          jecBins.size()-1, jecBins.data());
+
+        hEtaPtCHS[i] =  new TH2D(SF("hEtaPtCHS_%c",per), SF("hEtaPtCHS_%c",per), etaBins2.size()-1, etaBins2.data(),Ptbinning.size()-1, Ptbinning.data() );
+        hEtaPtPUPPI[i] = new TH2D(SF("hEtaPtPUPPI_%c",per), SF("hEtaPtPUPPI_%c",per), etaBins2.size()-1, etaBins2.data(),Ptbinning.size()-1, Ptbinning.data() );
+        hEtaPtPUPPIalone[i] = new TH2D(SF("hEtaPtPUPPIalone_%c",per), SF("hEtaPtPUPPIalone_%c",per), etaBins2.size()-1, etaBins2.data(),Ptbinning.size()-1, Ptbinning.data() );
+
     }
 
 
@@ -321,6 +357,10 @@ void match(const char  *fileName, int nevMax)
     while(chsTree.Next() && puppiTree.Next()) {
         ++iEv;
 
+        if(iEv % 1000000 == 0 ) cout <<fileName<<" "<< iEv << endl;
+        if(nevMax != -1) if(iEv >  nevMax) break;
+
+
         if(CHSjetPt.GetSize() < 1 || PUPPIjetPt.GetSize() < 1) continue;
         TString fileName = ((TChain*) chsTree.GetTree())->GetCurrentFile()->GetName();
         int fileId = fileName[fileName.Length()-6] -'A';
@@ -337,7 +377,15 @@ void match(const char  *fileName, int nevMax)
         hJetPt[fileId]->Fill(CHSjetPt[0], wgt);
         hJetPt[0]->Fill(CHSjetPt[0], wgtTot);
 
+        hJetPtUp[fileId]->Fill(CHSjetPt[0]*(1+CHSjetUnc[0]), wgt);
+        hJetPtUp[0]->Fill(CHSjetPt[0]*(1+CHSjetUnc[0]), wgtTot);
 
+        hJetPtDn[fileId]->Fill(CHSjetPt[0]*(1-CHSjetUnc[0]), wgt);
+        hJetPtDn[0]->Fill(CHSjetPt[0]*(1-CHSjetUnc[0]), wgtTot);
+
+        //cout << CHSjetPt[0] << " "<< CHSjetPt[0]*(1+CHSjetUnc[0]) <<" "<< CHSjetPt[0]*(1-CHSjetUnc[0]) << endl;
+
+        //exit(0);
         /*
         //Trigger 120
         if((*CHStriggerBit).at(3)) continue;
@@ -347,10 +395,38 @@ void match(const char  *fileName, int nevMax)
         if(CHSjetPt[0] < 160) continue;
         */
 
+        for(int i = 0; i < PUPPIjetPt.GetSize(); ++i) {
+            hJECpuppi[fileId]->Fill(abs(PUPPIjetEta[i]), PUPPIjetPt[i], PUPPIjetJEC[i], wgt);
+            hJECpuppi[0]->Fill(abs(PUPPIjetEta[i]),  PUPPIjetPt[i], PUPPIjetJEC[i], wgtTot);
+
+
+        }
+        for(int i = 0; i < CHSjetPt.GetSize(); ++i) {
+            hJECchs[fileId]->Fill(abs(CHSjetEta[i]), CHSjetPt[i], CHSjetJEC[i], wgt);
+            hJECchs[0]->Fill(abs(CHSjetEta[i]), CHSjetPt[i], CHSjetJEC[i], wgtTot);
+
+            if(CHSjetPt[i] >= jetSel) {
+                hEtaPtCHS[fileId]->Fill(abs(CHSjetEta[i]), CHSjetPt[i], wgt);
+                hEtaPtCHS[0]->Fill(abs(CHSjetEta[i]),  CHSjetPt[i], wgtTot);
+            }
+        }
+
+
+
+
+        set<int> Indx;
+        for(int i = 0; i < CHSjetPt.GetSize(); ++i)
+            Indx.insert(i);
+
 
         for(int i = 0; i < PUPPIjetPt.GetSize(); ++i) {
             if(PUPPIjetPt[i] < jetSel) continue;
 
+            hEtaPtPUPPI[fileId]->Fill(abs(PUPPIjetEta[i]), PUPPIjetPt[i], wgt);
+            hEtaPtPUPPI[0]->Fill(abs(PUPPIjetEta[i]),  PUPPIjetPt[i], wgtTot);
+
+
+            /*
             int m = -1;
             for(int j = 0; j < CHSjetPt.GetSize(); ++j) {
                 double d2 = dist2(PUPPIjetEta[i], PUPPIjetPhi[i], CHSjetEta[j], CHSjetPhi[j]);
@@ -359,13 +435,44 @@ void match(const char  *fileName, int nevMax)
                     break;
                 }
             }
+            */
+
+            int m = -1;
+            for(int ind :  Indx) {
+                double d2 = dist2(PUPPIjetEta[i], PUPPIjetPhi[i], CHSjetEta[ind], CHSjetPhi[ind]);
+                if(d2 < 0.2*0.2) {
+                    m = ind;
+                    Indx.erase(m);
+                    break;
+                }
+            }
+
 
             if(m != -1) {
                 //cout << "match " << PUPPIjetPt[i] << " "<< PUPPIjetPt[i] / CHSjetPt[m] << endl;
                 double r = PUPPIjetPt[i] / CHSjetPt[m];
+
+                double rUp = PUPPIjetPt[i] / (CHSjetPt[m] * (1 + CHSjetUnc[m]));
+                double rDn = PUPPIjetPt[i] / (CHSjetPt[m] * (1 - CHSjetUnc[m]));
+
                 hBalEtaPt[fileId]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], r, wgt);
                 hBalEtaPt[0]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], r, wgtTot);
+
+                hBalEtaPtUp[fileId]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], rUp, wgt);
+                hBalEtaPtUp[0]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], rUp, wgtTot);
+                hBalEtaPtDn[fileId]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], rDn, wgt);
+                hBalEtaPtDn[0]->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], rDn, wgtTot);
+
+                //cout <<"Event " <<  PUPPIjetJEC[i] << " "<< CHSjetJEC[m] << endl;
+
             }
+            else { //not matched
+                hEtaPtPUPPIalone[fileId]->Fill(abs(PUPPIjetEta[i]), PUPPIjetPt[i], wgt);
+                hEtaPtPUPPIalone[0]->Fill(abs(PUPPIjetEta[i]),  PUPPIjetPt[i], wgtTot);
+            }
+
+
+
             //else
                 //hBalEtaPt->Fill(abs(PUPPIjetEta[i]),PUPPIjetPt[i], 1.199);
 
@@ -389,15 +496,13 @@ void match(const char  *fileName, int nevMax)
         */
 
 
-        if(iEv % 1000000 == 0 ) cout <<fileName<<" "<< iEv << endl;
-        if(nevMax != -1) if(iEv >  nevMax) break;
         //if(CHSjetPt.GetSize() > 0 && PUPPIjetPt.GetSize() > 0)
             //cout <<iEv<<" "<< CHSjetPt[0] << " "<< PUPPIjetPt[0]  << endl;
 
     }
     //TFile *f = TFile::Open(fileName);
     TString outName = fileName;
-    outName = "histoDir/Aug/"+outName(outName.Last('/')+1, 1000);
+    outName = "histoDir/"+TString(outDir) + "/"+outName(outName.Last('/')+1, 1000);
     cout << outName << endl;
     //return;
 
@@ -405,6 +510,18 @@ void match(const char  *fileName, int nevMax)
     for(int i = 0; i < hBalEtaPt.size(); ++i) {
         hBalEtaPt[i]->Write();
         hJetPt[i]->Write();
+        hBalEtaPtUp[i]->Write();
+        hJetPtUp[i]->Write();
+        hBalEtaPtDn[i]->Write();
+        hJetPtDn[i]->Write();
+
+        hJECchs[i]->Write();
+        hJECpuppi[i]->Write();
+
+        hEtaPtCHS[i]->Write();
+        hEtaPtPUPPI[i]->Write();
+        hEtaPtPUPPIalone[i]->Write();
+
     }
     fOut->Close();
 

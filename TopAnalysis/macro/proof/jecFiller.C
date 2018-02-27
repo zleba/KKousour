@@ -35,6 +35,7 @@
 #include <TString.h>
 #include <TFile.h>
 #include <vector>
+//#include "TTreeReaderArray.h"
 
 #define SF TString::Format
 
@@ -99,6 +100,19 @@ void jecFiller::SlaveBegin(TTree * /*tree*/)
 
 }
 
+/*
+//You can check jetPt HLTjetPt if they are order
+bool isSorted(TTreeReaderArray &vec)
+{
+   bool isOK = true;
+   for(int i = 0; i < vec.size()-1; ++i) 
+       if(vec[i+1] > vec[i]) {
+           isOK = false;
+           break;
+       }
+   return isOK;
+}
+*/
 
 Bool_t jecFiller::Process(Long64_t entry)
 {
@@ -117,6 +131,11 @@ Bool_t jecFiller::Process(Long64_t entry)
    // Use fStatus to set the return value of TTree::Process().
    //
    // The return value is currently not used.
+
+
+    //sort(jetPt.begin(), jetPt.end()); //increasing
+    //sort(jetPt.rbegin(), jetPt.rend());//decreasing
+
 
    fReader.SetEntry(entry);
 
