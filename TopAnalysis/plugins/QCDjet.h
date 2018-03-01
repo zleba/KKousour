@@ -28,7 +28,7 @@ class QCDjet {
     float area;
     float unc;
     ROOT::Math::PtEtaPhiM4D<float> p4;
-    //bool tightID;
+    bool tightID;
 
     QCDjet() {
         /*

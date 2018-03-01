@@ -9,8 +9,8 @@ SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
 options = VarParsing.VarParsing ('analysis')
 
 options.register ('listFile',
-        #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/E.txt", # default value
-        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/1000to1400.txt", # default value
+        "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/Aug17/G.txt", # default value
+        #"/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/test/farm/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8/1000to1400.txt", # default value
         VarParsing.VarParsing.multiplicity.singleton, # singleton or list
         VarParsing.VarParsing.varType.string,         # string, int, or float
         "Name of file with list of files")

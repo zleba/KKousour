@@ -411,9 +411,6 @@ void match(const char  *fileName, const char *outDir, int nevMax)
             }
         }
 
-
-
-
         set<int> Indx;
         for(int i = 0; i < CHSjetPt.GetSize(); ++i)
             Indx.insert(i);

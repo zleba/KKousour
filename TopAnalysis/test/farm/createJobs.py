@@ -2,11 +2,11 @@
 
 import os
 curDir = os.getcwd()
-listADDRESS = curDir + '/fileLists/Aug17'
-#listADDRESS = curDir + '/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8'
+#listADDRESS = curDir + '/fileLists/Aug17'
+listADDRESS = curDir + '/fileLists/QCD_TuneCUETP8M1_13TeV_pythia8'
 
 #DUST = '/nfs/dust/cms/user/zlebcr/JEC/ntuplesJCunc'
-DUST = '/nfs/dust/cms/user/zlebcr/JEC/ntuplessNewFormat'
+DUST = '/nfs/dust/cms/user/zlebcr/JEC/ntuplesNewFormat'
 
 step=6
 

@@ -8,8 +8,9 @@ using namespace std;
 
 void GetJEC()
 {
-  string jecTag = "Summer16_07Aug2017";
-  int version = 4;
+  //string jecTag = "Summer16_07Aug2017";
+  string jecTag = "Spring16_25ns";
+  int version = 6;
   char period = 'B';
   string jetType = "AK4PFchs";
   vector<string> dumy;
@@ -32,9 +33,9 @@ void GetJEC()
 
   for(eta = -6; eta <= 6; eta += 0.1) {
   for(pt = 100; pt < 2600; pt += 400) {
-      //cout << pt <<" "<<eta << " "<< jetEcorrs.GetJECL2L3Residual(pt, eta) << endl;
+      cout << pt <<" "<<eta << " "<< jetEcorrs.GetJECL2L3Residual(pt, eta) << endl;
       //cout << pt <<" "<<eta << " "<< jetEcorrs.GetJECL2Relative(pt, eta) << endl;
-      cout << pt <<" "<<eta << " "<< jetEcorrs.GetJECL3Absolute(pt, eta) << endl;
+      //cout << pt <<" "<<eta << " "<< jetEcorrs.GetJECL3Absolute(pt, eta) << endl;
   }
   }
 

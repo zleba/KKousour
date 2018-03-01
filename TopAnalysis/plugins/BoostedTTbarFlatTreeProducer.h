@@ -81,7 +81,8 @@ inline QCDjet GetJet(const pat::Jet &ijet) {
     jjet.elm           =ijet.electronMultiplicity();
     jjet.mum           =ijet.muonMultiplicity();
     jjet.area          =ijet.jetArea();
-    jjet.p4            =ROOT::Math::PtEtaPhiM4D<float>(ijet.pt(), ijet.eta(), ijet.phi(), ijet.mass());
+    //jjet.p4            =ROOT::Math::PtEtaPhiM4D<float>( ijet.correctedP4("Uncorrected").pt(), ijet.eta(), ijet.phi(), ijet.correctedP4("Uncorrected").mass() );
+    jjet.p4            = ijet.correctedP4("Uncorrected");
     return jjet;
 }
 

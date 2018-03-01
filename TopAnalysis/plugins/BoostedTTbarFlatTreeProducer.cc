@@ -68,7 +68,7 @@ vector<QCDjet> FillJets (JECs &jetEcorrs, edm::Handle<pat::JetCollection> &jets,
       //cout << "PT before " << ijet->pt() << endl;
       //cout << "Rho is " << *rho <<" "<<  pvRho_  <<  endl;
       jetNow.jetJECtot = 
-           jetEcorrs.JEC_CHScorrections( ijet->pt(), ijet->eta(), ijet->jetArea(),  rho, dumy, L2L3res, Unc);
+           jetEcorrs.JEC_CHScorrections(ijet->correctedP4("Uncorrected").pt(), ijet->eta(), ijet->jetArea(),  rho, dumy, L2L3res, Unc);
       jetNow.jetJECl2l3Res = L2L3res;
       //cout << "PT after " << jet.Pt() << endl;
       //jetNow.p4 =  ROOT::Math::PtEtaPhiM4D<float>(newPt, ijet->eta(), ijet->phi(), ijet->mass()); 
@@ -128,10 +128,10 @@ void BoostedTTbarFlatTreeProducer::beginJob()
 
 
 
-  string jecTag = "Summer16_07Aug2017";
-  int version = 4;
-  //string jecTag = "Spring16_23Sep2016";
-  //int version = 2;
+  //string jecTag = "Summer16_07Aug2017";
+  //int version = 5;
+  string jecTag = "Spring16_25ns";
+  int version = 6;
 
 
   string jetType = "AK4PFchs";
@@ -498,10 +498,40 @@ void BoostedTTbarFlatTreeProducer::analyze(edm::Event const& iEvent, edm::EventS
   //JetCorrectionUncertainty mPFUncCHS(PFJetCorParCHS);//"Summer16_23Sep2016V4_MC_Uncertainty_AK8PFchs.txt");
 
 
+
+
+
   vector<QCDjet> jetVecCHS = FillJets(jetEcorrsCHS, jetsCHS, *rho);
   chsJets_ = &jetVecCHS;
   vector<QCDjet> jetVecPUPPI = FillJets(jetEcorrsPUPPI, jetsPUPPI, *rho);
   puppiJets_ = &jetVecPUPPI;
+
+
+
+  /*
+  for(pat::JetCollection::const_iterator ijet =jetsCHS->begin();ijet != jetsCHS->end(); ++ijet) {
+      auto mySets   = ijet->availableJECSets();
+      auto myLevels = ijet->availableJECLevels();
+      vector<string> dumy;
+      double L2L3res, Unc;
+      double corr = jetEcorrsCHS.JEC_CHScorrections(ijet->correctedP4("Uncorrected").pt(), ijet->eta(), ijet->jetArea(),  *rho, dumy, L2L3res, Unc);
+      cout << "Radek " <<  ijet->pt() / ijet->correctedP4("Uncorrected").pt()  << " "<< corr << endl;
+      //cout << ijet->correctedP4("Uncorrected").pt()
+  }
+  */
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   //nJets_ = pt_->size();

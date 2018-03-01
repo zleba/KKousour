@@ -1,14 +1,14 @@
 #ifndef JECs_h
 #define JECs_h
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
+//#include "FWCore/Framework/interface/Event.h"
+//#include "FWCore/Framework/interface/EDAnalyzer.h"
+//#include "FWCore/ParameterSet/interface/ParameterSet.h"
 //#include "SMPJ/AnalysisFW/interface/QCDJet.h"
 
 #include "CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
-#include "DataFormats/PatCandidates/interface/Jet.h"
+//#include "DataFormats/PatCandidates/interface/Jet.h"
 
 using namespace edm;
 using namespace std;
@@ -17,7 +17,7 @@ using namespace std;
 
 class JECs  {
 
-    typedef reco::Particle::LorentzVector LorentzVector;
+    //typedef reco::Particle::LorentzVector LorentzVector;
 
     public:
     //JECs(bool IsMCarlo, string GlobalTag, string JETTYPE, string jecUncSrc, vector<string> jecUncSrcNames);
@@ -208,7 +208,9 @@ class JECs  {
             else {
                 assert(0);
             }
-
+            if(GlobalTag.find("Spring16_25ns") != std::string::npos) {
+                Period = "";
+            }
 
 
             const string path = "/afs/desy.de/user/z/zlebcr/cms/CMSSW_9_3_0/src/KKousour/TopAnalysis/data/JECtablas/";
