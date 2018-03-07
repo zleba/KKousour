@@ -83,10 +83,14 @@ struct PLOTTER {
 
     void AsymmetryEtaDep();
     void AsymmetryPtDep();
-    void AsymmetryEtaPtDep();
+    void AsymmetryEtaPtDep(int eta1, int eta2);
+    void AsymmetryEtaPtTimeDep(int eta1, int eta2);
+
     void MeanAsym(int shift=0, TString style="");
     void JEC();
     void PtEtaDep();
+    void Unmatched();
+    void MatchingFactorsTimeDep();
 
 };
 
@@ -214,7 +218,9 @@ void PLOTTER::PtEtaDep()
     tie(upPad, dnPad) = TitleSpace(perID);
 
     //can->
-    dnPad->Divide(5, 4, 0.0001, 0.002);
+    //dnPad->Divide(5, 4, 0.0001, 0.002);
+    dnPad->cd();
+    DividePad(vector<double>(5,1.), vector<double>(4,1.));
     //DivideTransparent(
 
     gStyle->SetOptStat(0);
@@ -222,41 +228,145 @@ void PLOTTER::PtEtaDep()
 
     for(int i = 1; i <= 20; ++i) {
         dnPad->cd(i);
-        gPad->SetMargin(0.14, 0.05, 0.18, 0.08);
+        //gPad->SetMargin(0.14, 0.05, 0.18, 0.08);
         gPad->SetLogx();
         //gPad->SetLogy();
-        if(i >= 16) continue;
+        //if(i >= 19) continue;
         int iS = 1*i ;
         int iE = 1*(i+1) -1 ;
+        TH1D *hRef   = hPUPPI->ProjectionY(SF("ProjEta%d%d",i,rand()),  iS, iE);
         TH1D *hPuppi = hPUPPI->ProjectionY(SF("ProjEta%d%d",i,rand()),  iS, iE);
         TH1D *hPuppiA = hPUPPIa->ProjectionY(SF("ProjEtaAll%d%d",i,rand()),  iS, iE);
         TH1D *hChs    = hCHS->ProjectionY(SF("ProjEtaCHS%d%d",i,rand()),  iS, iE);
+        for(int i = 0; i <= hRef->GetNbinsX(); ++i)
+            hRef->SetBinError(i,0);
 
         double l = hPUPPI->GetXaxis()->GetBinLowEdge(iS);
         double u = hPUPPI->GetXaxis()->GetBinUpEdge(iE);
-        cout <<"Helenka " << l <<" "<< u << endl;
-        hPuppiA->SetTitle(SF("%1.1f < #eta < %1.1f", l, u));
-        hPuppiA->GetXaxis()->SetTitle("p_{T}^{PUPPI}");
+        //cout <<"Helenka " << l <<" "<< u << endl;
         hPuppiA->SetLineColor(kBlack);
+        hChs->SetLineColor(kRed);
 
 
         //hPuppi->SetMaximum(1.2*hPUPPI->GetMaximum());
         //hPuppi->SetMaximum(10);
 
         //hPuppi->Scale(1., "width");
-        hPuppiA->Divide(hPuppi);
+        hPuppiA->Divide(hRef);
+        hPuppi->Divide(hRef);
+        hChs->Divide(hRef);
+
         //hChs->Scale(1., "width");
 
-        hPuppiA->SetMinimum(0.00);
-        hPuppiA->SetMaximum(0.20);
+        //hPuppiA->SetMinimum(0.00);
+        //hPuppiA->SetMaximum(0.20);
 
         hPuppiA->Draw();
-        //hChs->Draw("same");
-        SetFontSizes(hPuppiA, 0.07);
+        hPuppi->Draw("same");
+        hChs->Draw("same");
+        //SetFontSizes(hPuppiA, 0.07);
 
-        //hEta->Draw("hist e ");
-        //hEtaUp->Draw("hist e same");
-        //hEtaDn->Draw("hist e same");
+        GetXaxis()->SetRangeUser(34, 1780);
+        GetYaxis()->SetRangeUser(0.41, 1.59);
+        GetXaxis()->SetMoreLogLabels();
+        GetXaxis()->SetNoExponent();
+
+        SetFTO({12}, {5.1}, {1.63, 3.0, 0.3, 3.5});
+
+        GetFrame()->SetTitle("");
+        if(i == 1)
+            GetYaxis()->SetTitle("#sigma/#sigma_{PUPPI}");
+        if(i == 20)
+            GetXaxis()->SetTitle("p_{T}^{PUPPI} [GeV]");
+
+        DrawLatexUp(-1, SF("%1.1f < |#eta| < %1.1f", l, u));
+
+        if(i == 19) {
+            TLegend *leg = new TLegend(0.2, 0.5, 0.7, 0.7);
+            leg->SetBorderSize(0);
+            leg->SetTextSize(GetXaxis()->GetTitleSize());
+            leg->AddEntry(hPuppi, "PUPPI");
+            leg->AddEntry(hChs, "CHS");
+            leg->Draw();
+        }
+
+    }
+    
+    can->Print(outName);
+    //can->Print(outName);
+    can->Clear();
+    delete can;
+}
+
+void PLOTTER::Unmatched()
+{
+    auto hPUPPI = hEtaPtPUPPI[perID];
+    auto hPUPPIa = hEtaPtPUPPIalone[perID];
+
+    TCanvas *can = new TCanvas("can", "can");
+
+    TPad *upPad, *dnPad;
+    tie(upPad, dnPad) = TitleSpace(perID);
+
+    //can->
+    //dnPad->Divide(5, 4, 0.0001, 0.002);
+    dnPad->cd();
+    DividePad(vector<double>(5,1.), vector<double>(4,1.));
+    //DivideTransparent(
+
+    gStyle->SetOptStat(0);
+    //DivideTransparent( 
+
+    for(int i = 1; i <= 20; ++i) {
+        dnPad->cd(i);
+        //gPad->SetMargin(0.14, 0.05, 0.18, 0.08);
+        gPad->SetLogx();
+        //gPad->SetLogy();
+        //if(i >= 19) continue;
+        int iS = 1*i ;
+        int iE = 1*(i+1) -1 ;
+        TH1D *hRef   = hPUPPI->ProjectionY(SF("ProjEta%d%d",i,rand()),  iS, iE);
+        TH1D *hPuppi = hPUPPI->ProjectionY(SF("ProjEta%d%d",i,rand()),  iS, iE);
+        TH1D *hPuppiA = hPUPPIa->ProjectionY(SF("ProjEtaAll%d%d",i,rand()),  iS, iE);
+        for(int i = 0; i <= hRef->GetNbinsX(); ++i)
+            hRef->SetBinError(i,0);
+
+        double l = hPUPPI->GetXaxis()->GetBinLowEdge(iS);
+        double u = hPUPPI->GetXaxis()->GetBinUpEdge(iE);
+        //cout <<"Helenka " << l <<" "<< u << endl;
+        hPuppiA->SetLineColor(kBlack);
+
+        //hPuppi->SetMaximum(1.2*hPUPPI->GetMaximum());
+        //hPuppi->SetMaximum(10);
+
+        //hPuppi->Scale(1., "width");
+        hPuppiA->Divide(hPuppi);
+
+        //hChs->Scale(1., "width");
+
+        //hPuppiA->SetMinimum(0.00);
+        //hPuppiA->SetMaximum(0.20);
+
+        hPuppiA->Draw();
+        //hPuppi->Draw("same");
+        //hChs->Draw("same");
+
+        //SetFontSizes(hPuppiA, 0.07);
+
+        GetXaxis()->SetRangeUser(34, 1780);
+        GetYaxis()->SetRangeUser(0.0, 0.029);
+        GetXaxis()->SetMoreLogLabels();
+        GetXaxis()->SetNoExponent();
+
+        SetFTO({12}, {5.1}, {1.63, 3.0, 0.3, 5.4});
+
+        GetFrame()->SetTitle("");
+        if(i == 1)
+            GetYaxis()->SetTitle("#sigma^{unmatched}_{PUPI}/#sigma_{PUPPI}");
+        if(i == 20)
+            GetXaxis()->SetTitle("p_{T}^{PUPPI} [GeV]");
+
+        DrawLatexUp(-1, SF("%1.1f < |#eta| < %1.1f", l, u));
     }
     
     can->Print(outName);
@@ -266,11 +376,98 @@ void PLOTTER::PtEtaDep()
 }
 
 
+void PLOTTER::MatchingFactorsTimeDep()
+{
+
+    TH3D *hBalEtaPt;
+    hBalEtaPt = dynamic_cast<TH3D*>( hBalEtaPtAll[0]->Clone(SF("%d",rand())));
+    assert(hBalEtaPt);
+
+
+    TCanvas *can = new TCanvas("can", "can");
+
+    TPad *upPad, *dnPad;
+    tie(upPad, dnPad) = TitleSpace(0);
+
+    //can->
+    //dnPad->Divide(5, 4, 0.0001, 0.002);
+    dnPad->cd();
+    DividePad(vector<double>(5,1.), vector<double>(4,1.));
+    //DivideTransparent(
+
+    gStyle->SetOptStat(0);
+    //DivideTransparent( 
+
+    for(int i = 1; i <= 20; ++i) {
+        dnPad->cd(i);
+        //gPad->SetMargin(0.14, 0.05, 0.18, 0.08);
+        gPad->SetLogx();
+        //gPad->SetLogy();
+        //if(i >= 19) continue;
+        int iS = 1*i ;
+        int iE = 1*(i+1) -1 ;
+
+
+        double l = hBalEtaPt->GetXaxis()->GetBinLowEdge(iS);
+        double u = hBalEtaPt->GetXaxis()->GetBinUpEdge(iE);
+
+        //cout << "xOrg " << hBalEtaPt->GetXaxis()->GetXmin() <<" "<< hBalEtaPt->GetXaxis()->GetXmax()<< endl;
+        //cout << "yOrg " << hBalEtaPt->GetYaxis()->GetXmin() <<" "<< hBalEtaPt->GetYaxis()->GetXmax()<< endl;
+        //cout << "zOrg " << hBalEtaPt->GetZaxis()->GetXmin() <<" "<< hBalEtaPt->GetZaxis()->GetXmax()<< endl;
+
+        vector<TProfile*> prof(8);
+        for(int k = 0; k < 8; ++k) {
+            iS = min(19,iS);
+            iE = min(19,iE);
+            hBalEtaPtAll[k]->GetXaxis()->SetRange(iS,iE);
+            TH2D *hTemp = dynamic_cast<TH2D*>(hBalEtaPtAll[k]->Project3D(SF("%d_yz",rand()))); 
+            assert(hTemp);
+            prof[k] = hTemp->ProfileY();
+
+            prof[k]->SetLineColor(1+k);
+            if(k==0)
+                prof[k]->Draw("hist");
+            else
+                prof[k]->Draw("hist same");
+        }
+        prof[0]->Draw("hist same");
+
+        GetXaxis()->SetRangeUser(34, 1780);
+        GetYaxis()->SetRangeUser(0.901, 1.149);
+        GetXaxis()->SetMoreLogLabels();
+        GetXaxis()->SetNoExponent();
+        GetYaxis()->SetNdivisions(505);
+
+        SetFTO({12}, {5.1}, {1.63, 3.0, 0.3, 4.4});
+
+        GetFrame()->SetTitle("");
+        if(i == 1)
+            GetYaxis()->SetTitle("#LT p_{T}^{PUPI}/p_{T}^{CHS}#GT");
+        if(i == 20)
+            GetXaxis()->SetTitle("p_{T}^{PUPPI} [GeV]");
+
+        DrawLatexUp(-1, SF("%1.1f < |#eta| < %1.1f", l, u));
+
+        if(i == 20) {
+            TLegend * leg = new TLegend(0.05, 0.40, 0.32, 0.85);
+            leg->SetBorderSize(0);
+            leg->SetFillStyle(0);
+            for(int k = 0; k < 8; ++k) {
+                TString t = k != 0 ? SF("Run %c",'A'+ k) : "All Runs";
+                leg->AddEntry(prof[k], t, "l");
+            }
+            leg->Draw();
+        }
 
 
 
-
-
+    }
+    
+    can->Print(outName);
+    //can->Print(outName);
+    can->Clear();
+    delete can;
+}
 
 
 
@@ -310,7 +507,7 @@ void PLOTTER::AsymmetryEtaDep()
 
         double l = hBalEtaPt->GetXaxis()->GetBinLowEdge(iS);
         double u = hBalEtaPt->GetXaxis()->GetBinUpEdge(iE);
-        hEta->SetTitle(SF("%1.1f < #eta < %1.1f", l, u));
+        hEta->SetTitle(SF("%1.1f < |#eta| < %1.1f", l, u));
         hEta->GetXaxis()->SetTitle("p_{T}^{PUPPI} / p_{T}^{CHS}");
         hEta->SetLineColor(kBlack);
 
@@ -325,6 +522,7 @@ void PLOTTER::AsymmetryEtaDep()
         hEta->Draw("hist e ");
         hEtaUp->Draw("hist e same");
         hEtaDn->Draw("hist e same");
+        GetXaxis()->SetTitle("p_{T}^{PUPPI} / p_{T}^{CHS}");
     }
     
     can->Print(outName);
@@ -384,14 +582,21 @@ void PLOTTER::AsymmetryPtDep()
 
 
 
-void PLOTTER::AsymmetryEtaPtDep()
+void PLOTTER::AsymmetryEtaPtDep(int eta1, int eta2)
 {
     auto hBalEtaPt = hBalEtaPtAll[perID];
     auto hBalEtaPtUp = hBalEtaPtAllUp[perID];
     auto hBalEtaPtDn = hBalEtaPtAllDn[perID];
 
-    const vector<int> etaBins = {1, 4, 7, 10, 13, 16};
-    const vector<int> ptBins = {6, 12, 18, 24, 30, 36};
+    vector<int> etaBins;
+    for(int e = eta1; e <= eta2; ++e)
+        etaBins.push_back(e);
+    etaBins.push_back(eta2+1);
+    int nEta = etaBins.size()-1;
+    
+    //k= {1, 4, 7, 10, 13, 16};
+    const vector<int> ptBins = {12, 18, 24, 30, 36, 43, 46};
+    int nPt = ptBins.size() - 1;
 
     //TProfile2D * hProf2 = hBalEtaPt->Project3DProfile();
     //Print grid
@@ -400,37 +605,31 @@ void PLOTTER::AsymmetryEtaPtDep()
     TPad *upPad, *dnPad;
     tie(upPad, dnPad) = TitleSpace(perID);
 
-    dnPad->Divide(5, 5, 0, 0);
-    dnPad->SetBottomMargin(0.1);
-    for(int i = 1; i <= 5; ++i) 
-    for(int j = 1; j <= 5; ++j) {
-        dnPad->cd((i-1)*5 + j);
+    //dnPad->Divide(5, 5, 0, 0);
+
+
+    //dnPad->SetBottomMargin(   0.1);
+    dnPad->cd();
+    SetTopBottom(0.1, 0.1 + 0.8/5.*(5-nEta));
+
+    DividePad(vector<double>(ptBins.size()-1,1.), vector<double>(nEta,1.));
+
+    for(int i = 1; i <= nEta; ++i) 
+    for(int j = 1; j <= nPt;  ++j) {
+        dnPad->cd((i-1)*nPt + j);
         int iS = etaBins[i-1];
         int iE = etaBins[i+1-1]-1;
-        int jS = ptBins[j];
-        int jE = ptBins[j+1]-1;
+        int jS = ptBins[j-1];
+        int jE = ptBins[j+1-1]-1;
 
         TH1D *hBoth   = hBalEtaPt->ProjectionZ(SF("ProjBoth%d%d%d",i,j,rand()),  iS, iE, jS, jE);
         TH1D *hBothUp = hBalEtaPtUp->ProjectionZ(SF("ProjBothUp%d%d%d",i,j,rand()),  iS, iE, jS, jE);
         TH1D *hBothDn = hBalEtaPtDn->ProjectionZ(SF("ProjBothDn%d%d%d",i,j,rand()),  iS, iE, jS, jE);
 
-        //cout <<"Radek "<< i << " "<< j<<" " << hBoth->GetStdDev() << endl;
 
-        double lPt = hBalEtaPt->GetYaxis()->GetBinLowEdge(jS);
-        double uPt = hBalEtaPt->GetYaxis()->GetBinUpEdge(jE);
-        double lEt = hBalEtaPt->GetXaxis()->GetBinLowEdge(iS);
-        double uEt = hBalEtaPt->GetXaxis()->GetBinUpEdge(iE);
-
-        //cout << "RADEK " << j <<" "<< lPt << " "<< endl;
-
-        //hBoth->SetTitle(SF("#splitline{%3.0f < p_{T} < %3.0f}{%1.1f < #eta < %1.1f}", lPt, uPt, lEt, uEt));
-        //cout << "RADEKT " << SF("%3.0f < p_{T} < %3.0f     %1.1f < #eta < %1.1f", lPt, uPt, lEt, uEt) << endl;
-        hBoth->SetTitle(SF("%3.0f < p_{T} < %3.0f     %1.1f < #eta < %1.1f", lPt, uPt, lEt, uEt));
-
-        hBoth->GetXaxis()->SetTitle("p_{T}^{PUPPI} / p_{T}^{CHS}");
         hBoth->SetMaximum(1.2*hBoth->GetMaximum());
-        SetFontSizes(hBoth, 0.07);
-        hBoth->SetTitleSize(0.13);
+        //SetFontSizes(hBoth, 0.07);
+        //hBoth->SetTitleSize(0.13);
         hBoth->Draw("hist e ");
 
         hBothUp->SetLineColor(kBlue);
@@ -439,15 +638,148 @@ void PLOTTER::AsymmetryEtaPtDep()
         hBothDn->SetLineStyle(2);
 
 
-        hBothUp->Draw("hist e same");
-        hBothDn->Draw("hist e same");
+        //hBothUp->Draw("hist e same");
+        //hBothDn->Draw("hist e same");
+
+        GetFrame()->SetTitle("");
+
+        SetFTO({11}, {5.1}, {1.3, 3.0, 0.3, 1.1});
+        GetYaxis()->SetLabelSize(0);
+        GetXaxis()->SetNdivisions(505);
+        GetYaxis()->SetNdivisions(505);
+
+        if(j % nPt == 0)
+            GetXaxis()->SetTitle("p_{T}^{PUPPI} / p_{T}^{CHS}");
+
+
+        double lPt = hBalEtaPt->GetYaxis()->GetBinLowEdge(jS);
+        double uPt = hBalEtaPt->GetYaxis()->GetBinUpEdge(jE);
+        double lEt = hBalEtaPt->GetXaxis()->GetBinLowEdge(iS);
+        double uEt = hBalEtaPt->GetXaxis()->GetBinUpEdge(iE);
         //hBoth->SetTitle(SF("%3.0f < p_{T} < %3.0f     %1.1f < #eta < %1.1f", lPt, uPt, lEt, uEt));
+
+        if(i == 1)
+            DrawLatexUp(dnPad->GetPad((i-1)*nPt + j),  1.1, SF("%3.0f < p_{T} < %3.0f", lPt, uPt));
+        if(j == 1)
+            DrawLatexLeft(dnPad->GetPad((i-1)*nPt + j),  2.1, SF("%1.1f < |#eta| < %1.1f", lEt, uEt), -1, ">" );
+
     }
 
     can->Print(outName);
     can->Clear();
     delete can;
 }
+
+
+void PLOTTER::AsymmetryEtaPtTimeDep(int eta1, int eta2)
+{
+    auto hBalEtaPt = hBalEtaPtAll[0];
+
+    vector<int> etaBins;
+    for(int e = eta1; e <= eta2; ++e)
+        etaBins.push_back(e);
+    etaBins.push_back(eta2+1);
+    int nEta = etaBins.size()-1;
+    
+    //k= {1, 4, 7, 10, 13, 16};
+    const vector<int> ptBins = {12, 18, 24, 30, 36, 43, 46};
+    int nPt = ptBins.size() - 1;
+
+    //TProfile2D * hProf2 = hBalEtaPt->Project3DProfile();
+    //Print grid
+
+    TCanvas *can = new TCanvas("can", "can");
+    TPad *upPad, *dnPad;
+    tie(upPad, dnPad) = TitleSpace(perID);
+
+    //dnPad->Divide(5, 5, 0, 0);
+
+
+    //dnPad->SetBottomMargin(   0.1);
+    dnPad->cd();
+    SetTopBottom(0.1, 0.1 + 0.8/5.*(5-nEta));
+
+    DividePad(vector<double>(ptBins.size()-1,1.), vector<double>(nEta,1.));
+
+    for(int i = 1; i <= nEta; ++i) 
+    for(int j = 1; j <= nPt;  ++j) {
+        dnPad->cd((i-1)*nPt + j);
+        int iS = etaBins[i-1];
+        int iE = etaBins[i+1-1]-1;
+        int jS = ptBins[j-1];
+        int jE = ptBins[j+1-1]-1;
+
+        TH1D *hBoth  = hBalEtaPtAll[0]->ProjectionZ(SF("ProjBoth%d%d%d",i,j,rand()),  iS, iE, jS, jE);
+        hBoth->SetLineColor(kBlack);
+        hBoth->Draw("hist e ");
+
+        double Max = hBoth->GetMaximum();
+
+        vector<TH1D*> hBothNow(8);
+        hBothNow[0] = hBoth;
+        for(int k = 1; k < 8; ++k) {
+            hBothNow[k]  = hBalEtaPtAll[k]->ProjectionZ(SF("ProjBoth%d%d%d",i,j,rand()),  iS, iE, jS, jE);
+
+            if(hBothNow[k]->Integral() > 0)
+                hBothNow[k]->Scale(hBoth->Integral() / hBothNow[k]->Integral());
+            hBothNow[k]->SetLineColor(k+1);
+            hBothNow[k]->Draw("hist e same");
+            Max = max(Max, hBothNow[k]->GetMaximum());
+        }
+        hBoth->Draw("hist e same");
+
+        GetFrame()->SetMaximum(1.2*Max);
+
+        GetFrame()->SetTitle("");
+
+        SetFTO({11}, {5.1}, {1.3, 3.0, 0.3, 1.1});
+        GetYaxis()->SetLabelSize(0);
+        GetXaxis()->SetNdivisions(505);
+        GetYaxis()->SetNdivisions(505);
+
+        if(j % nPt == 0)
+            GetXaxis()->SetTitle("p_{T}^{PUPPI} / p_{T}^{CHS}");
+
+
+        double lPt = hBalEtaPt->GetYaxis()->GetBinLowEdge(jS);
+        double uPt = hBalEtaPt->GetYaxis()->GetBinUpEdge(jE);
+        double lEt = hBalEtaPt->GetXaxis()->GetBinLowEdge(iS);
+        double uEt = hBalEtaPt->GetXaxis()->GetBinUpEdge(iE);
+        //hBoth->SetTitle(SF("%3.0f < p_{T} < %3.0f     %1.1f < #eta < %1.1f", lPt, uPt, lEt, uEt));
+
+        if(i == 1)
+            DrawLatexUp(dnPad->GetPad((i-1)*nPt + j),  1.1, SF("%3.0f < p_{T} < %3.0f", lPt, uPt));
+        if(j == 1)
+            DrawLatexLeft(dnPad->GetPad((i-1)*nPt + j),  2.1, SF("%1.1f < |#eta| < %1.1f", lEt, uEt), -1, ">" );
+
+        if(i == 1 && j == nPt) {
+            TLegend * leg = new TLegend(0.05, 0.15, 0.32, 0.55);
+            leg->SetBorderSize(0);
+            leg->SetFillStyle(0);
+            for(int k = 0; k < 8; ++k) {
+                TString t = k != 0 ? SF("Run %c",'A'+ k) : "All Runs";
+                leg->AddEntry(hBothNow[k], t, "l");
+            }
+            leg->Draw();
+
+        }
+    }
+
+    can->Print(outName);
+    can->Clear();
+    delete can;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 void PLOTTER::MeanAsym(int shift, TString style)
@@ -478,12 +810,15 @@ void PLOTTER::MeanAsym(int shift, TString style)
     hProf->GetXaxis()->SetRangeUser(20, 2000);
     hProf->BuildOptions(0.8, 1.2, "s");
 
+    hProf->SetTitle("");
+    /*
     if(shift == 0)
         hProf->SetTitle("Mean value of p_{T}^{PUPPI} / p_{T}^{CHS}");
     else if(shift == 1)
         hProf->SetTitle("Mean value of p_{T}^{PUPPI} / p_{T}^{CHS} (JECup)");
     else
         hProf->SetTitle("Mean value of p_{T}^{PUPPI} / p_{T}^{CHS} (JECdn)");
+    */
 
 
     hProf->GetYaxis()->SetTitle("#eta");
@@ -517,11 +852,16 @@ void plotter()
     //TString myOut = "plots/Spring16_25nsV6.pdf";
     //plot.Init("histos/Spring16_25nsV6__Spring16_25nsV6.root", myOut+"(");
 
-    TString myOut = "plots/Summer16_07Aug2017V5.pdf";
-    plot.Init("histos/Summer16_07Aug2017V5__Summer16_07Aug2017V5.root", myOut+"(");
+    TString myOut = "plots/Summer16_07Aug2017V5new.pdf";
+    plot.Init("histos/Summer16_07Aug2017V5__Summer16_07Aug2017V5new.root", myOut+"(");
+    //TString myOut = "plots/Summer16_07Aug2017V5noRes.pdf";
+    //plot.Init("histos/Summer16_07Aug2017V5__Summer16_07Aug2017V5noRes.root", myOut+"(");
+
 
     //TString myOut = "plots/Mixed.pdf";
-    //plot.Init("histos/Summer16_07Aug2017V5__Spring16_23Sep2016V2.root", myOut+"(");
+    //plot.Init("histos/Summer16_07Aug2017V5__Spring16_23Sep2016V2new.root", myOut+"(");
+    //TString myOut = "plots/MixedNoRes.pdf";
+    //plot.Init("histos/Summer16_07Aug2017V5__Spring16_23Sep2016V2noRes.root", myOut+"(");
 
 
 
@@ -536,18 +876,35 @@ void plotter()
     plot.MeanAsym(0);
     return;
     */
-    for(int i = 0; i < 8; ++i) {
+    gStyle->SetOptStat(0);
+
+    plot.AsymmetryEtaPtTimeDep(1, 5);
+    plot.outName = myOut;
+    plot.AsymmetryEtaPtTimeDep(6, 10);
+    plot.AsymmetryEtaPtTimeDep(11, 15);
+    plot.AsymmetryEtaPtTimeDep(16, 18);
+    plot.MatchingFactorsTimeDep();
+
+
+
+    int iMax = 7;
+    for(int i = 0; i <= iMax; ++i) {
         plot.perID = i;
         plot.AsymmetryEtaDep();
         plot.outName = myOut;
         plot.AsymmetryPtDep();
-        plot.AsymmetryEtaPtDep();
+        plot.AsymmetryEtaPtDep(1, 5);
+        plot.AsymmetryEtaPtDep(6, 10);
+        plot.AsymmetryEtaPtDep(11, 15);
+        plot.AsymmetryEtaPtDep(16, 18);
 
+        plot.PtEtaDep();
+        plot.Unmatched();
 
         plot.MeanAsym(0);
         plot.MeanAsym(0, "colz");
         plot.MeanAsym(1);
-        if(i == 7)
+        if(i == iMax)
             plot.outName = myOut + ")";
         plot.MeanAsym(2);
     }

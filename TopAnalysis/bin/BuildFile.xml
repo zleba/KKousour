@@ -1,9 +1,8 @@
-<!-- rootcling QCDjet.h    -->
+<flags CXXFLAGS="-g -O3 -DDEBUG -Wall -std=gnu++1z" />
 
-<library   file="*.cc" name="KKousourTopAnalysisPlugins">
-<use   name="root"/> 
-<use   name="rootrflx"/>
-<use   name="rootcore"/>
+<use name="root" />
+<use name="rootgraphics" />
+
 <use   name="RecoMET/METAlgorithms"/>
 <use   name="JetMETCorrections/Algorithms"/>
 <use   name="JetMETCorrections/Modules"/>
@@ -28,8 +27,13 @@
 <use   name="CondFormats/L1TObjects"/>
 <use   name="CondFormats/DataRecord"/>
 <use   name="CondFormats/JetMETObjects"/>
-<flags   EDM_PLUGIN="1"/>
-<flags CXXFLAGS="-g -O2 -DDEBUG " EDM_PLUGIN="1"/>
 
-</library>
+
+
+
+
+
+
+
+<bin name="JECconvertor" file="JECconvertor.cc" />
 

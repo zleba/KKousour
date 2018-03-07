@@ -17,7 +17,8 @@
 #include <TTreeReaderArray.h>
 
 // Headers needed by this particular selector
-#include "KKousour/TopAnalysis/plugins/QCDjet.h"
+//#include "KKousour/TopAnalysis/plugins/QCDjet.h"
+#include "KKousour/TopAnalysis/interface/QCDjet.h"
 
 #include <vector>
 #include <array>
@@ -76,8 +77,8 @@ class Luminosity {
         TString path = "/nfs/dust/cms/user/connorpa/SMPJ/effective_luminosity_Run2016BtoH/";
 
         //Read luminosities to map
-        for(int i = 0; i < files.size(); ++i) {
-            for(int j = 0; j < files[i].size(); ++j) {
+        for(unsigned i = 0; i < files.size(); ++i) {
+            for(unsigned j = 0; j < files[i].size(); ++j) {
                 auto lum = GetLumis(path + files[i][j]);
                 for(auto v : lum) {
                     lumiMap[i+1][v.first] += v.second;
@@ -87,7 +88,7 @@ class Luminosity {
         }
 
         //Evaluate the total luminosity
-        for(int i = 1; i < lumiMap.size(); ++i)
+        for(unsigned i = 1; i < lumiMap.size(); ++i)
             for(auto v : lumiMap[i])
                 lumiMap[0][v.first] += v.second;
 
@@ -103,7 +104,7 @@ class Luminosity {
 
 
         //Assert identical trigger configuration:
-        for(int i = 1; i < lumiMap.size(); ++i) {
+        for(unsigned i = 1; i < lumiMap.size(); ++i) {
             for(auto m : lumiMap[0])
                 assert(lumiMap[i].count(m.first));
             //assert(lumiMap[0].size() == lumiMap[i].size());
@@ -238,24 +239,41 @@ public :
    TTreeReaderArray<int> triggerPre = {fReader, "triggerPre"};
 
     static const int nPer = 8;
-    array<TH3D*,nPer> hBalEtaPt;
-    array<TH1D*,nPer> hJetPt;
-                                      
-    //array<TH3D*> hBalEtaPtUp;
-    //array<TH1D*> hJetPtUp;
-    //array<TH3D*> hBalEtaPtDn;
-    //array<TH1D*> hJetPtDn;
-                                      
-    array<TH3D*,nPer> hJECpuppi;
-    array<TH3D*,nPer> hJECchs;
-                                      
-    array<TH2D*,nPer> hEtaPtCHS;
-    array<TH2D*,nPer> hEtaPtPUPPI;
-    array<TH2D*,nPer> hEtaPtPUPPIalone;
+    struct Histos {
+        TList  *fOutput;
+        double w, wTot;
+        int fileId;
+        array<TH3D*,nPer> hBalEtaPt;
+        array<TH1D*,nPer> hJetPt;
+                                          
+        array<TH3D*,nPer> hJECpuppi;
+        array<TH3D*,nPer> hJECchs;
+                                          
+        array<TH2D*,nPer> hEtaPtCHS;
+        array<TH2D*,nPer> hEtaPtPUPPI;
+        array<TH2D*,nPer> hEtaPtPUPPIalone;
+        void Init(TList *fOutput_);
+
+        void Fill1D(array<TH1D*,nPer> &hist, double x) {
+            hist[fileId]->Fill(x, w);
+            hist[0]     ->Fill(x, wTot);
+        }
+
+        void Fill2D(array<TH2D*,nPer> &hist, double x, double y) {
+            hist[fileId]->Fill(x, y, w);
+            hist[0]     ->Fill(x, y, wTot);
+        }
+        void Fill3D(array<TH3D*,nPer> &hist, double x, double y, double z) {
+            hist[fileId]->Fill(x, y, z, w);
+            hist[0]     ->Fill(x, y, z, wTot);
+        }
+
+    } h;
 
     Luminosity lum;
 
     JECs jetCorrsCHS, jetCorrsPUPPI;
+    TString currFile ="";
 
 
 

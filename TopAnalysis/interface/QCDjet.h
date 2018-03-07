@@ -2,7 +2,7 @@
 #define _QCDjet_
 
 #include <vector>
-#include "TObject.h"
+//#include "TObject.h"
 #include "Math/PtEtaPhiM4D.h"
 
 using namespace std;
@@ -56,7 +56,7 @@ class QCDjet {
     }
     virtual ~QCDjet(){}
 
-    ClassDef(QCDjet,1)
+    //ClassDef(QCDjet,1)
 
 };
 
@@ -68,7 +68,6 @@ class QCDjet {
 #pragma link C++ class HLTjet +;
 #pragma link C++ class vector<HLTjet> +;
 #pragma link C++ class vector<ROOT::Math::PtEtaPhiM4D<float> > +;
-
 #endif
 
 #endif
